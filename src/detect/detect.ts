@@ -1,5 +1,5 @@
-import fma from './fma.wat'
-import simd from './simd.wat'
+import fma from './fma.wat?embed'
+import simd from './simd.wat?embed'
 
 export type Feature =
 	| 'js'   // JS only (asm.js where possible)

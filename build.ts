@@ -5,19 +5,22 @@ import { $ } from 'bun'
 import path from 'node:path'
 
 let wat_plugin = {
-	name: 'wat',
+	name: 'wat-embed',
 	setup(build: esbuild.PluginBuild) {
-		build.onResolve({ filter: /\.wat$/ }, args => {
+		build.onResolve({ filter: /\.wat\?embed$/ }, args => {
 			if (args.resolveDir === '') {
 				return
 			}
+
+			args.path = args.path.replace(/\?embed$/, '')
+			
 			return {
 				path: path.isAbsolute(args.path) ? args.path : path.join(args.resolveDir, args.path),
-				namespace: 'wat-import',
+				namespace: 'wat-embed-import',
 			}
 		})
 
-		build.onLoad({ filter: /.*/, namespace: 'wat-import' }, async (args) => {
+		build.onLoad({ filter: /.*/, namespace: 'wat-embed-import' }, async (args) => {
 			const k = await $`wat2wasm --enable-all ${args.path} --output=-`.arrayBuffer()
 
 			return {
