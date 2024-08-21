@@ -1,5 +1,5 @@
-import esbuild from 'esbuild';
-import type { BuildOptions } from 'esbuild';
+import esbuild from 'esbuild'
+import type { BuildOptions } from 'esbuild'
 import { dtsPlugin } from 'esbuild-plugin-d.ts'
 import { $ } from 'bun'
 import path from 'node:path'
@@ -36,7 +36,7 @@ const opt: BuildOptions = {
 	sourcemap: true,
 	minify: true,
 	bundle: true,
-	plugins: [wat_plugin],
+	plugins: [wat_plugin]
 }
 
 await esbuild.build({
@@ -46,7 +46,7 @@ await esbuild.build({
 	format: 'iife',
 	platform: 'browser',
 	globalName: 'randomx'
-});
+})
 
 await esbuild.build({
 	...opt,
@@ -54,7 +54,7 @@ await esbuild.build({
 	target: ['node19'],
 	platform: 'neutral',
 	format: 'cjs',
-});
+})
 
 await esbuild.build({
 	...opt,
@@ -62,4 +62,4 @@ await esbuild.build({
 	target: ['node19'],
 	platform: 'node',
 	format: 'esm'
-});
+})

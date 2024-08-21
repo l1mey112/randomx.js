@@ -1,5 +1,8 @@
 import { detect, type Feature } from './detect/detect'
-import blake2b from 'blake2b'
+
+import { run } from './blake2b'
+
+run()
 
 type Cache = {}
 
@@ -25,10 +28,10 @@ export async function calculate_hash(input: Uint8Array, cache?: Cache | null, fe
 		cache = await calculate_cache(new Uint8Array(0))
 	}
 
-	const Hash256 = blake2b(32)
-	const Hash512 = blake2b(64)
+	/* const Hash256 = blake2b(32)
+	const Hash512 = blake2b(64) */
 
 	return new Uint8Array(32)
 }
 
-calculate_hash(new Uint8Array([3, 2]))
+//calculate_hash(new Uint8Array([3, 2]))
