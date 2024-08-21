@@ -1,18 +1,23 @@
 import fma from './fma.wat?embed'
 import simd from './simd.wat?embed'
 
+/* type FeatureBase =
+	| 'js'   // JS only (asm.js where possible)
+	| 'simd' // JS + WASM + SIMD + BULK MEMORY
+	| 'fma'  // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
+
+export type Feature =
+	| FeatureBase
+	| 'simd+tail' | 'fma+tail' // TAIL CALLS */
+
 export type Feature =
 	| 'js'   // JS only (asm.js where possible)
 	| 'simd' // JS + WASM + SIMD + BULK MEMORY
-	| 'fma'  // JS + WASM + SIMD + BULK MEMORY + RELAXED SIMD + WORKING FMA
+	| 'fma'  // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
 
 export async function detect(): Promise<Feature> {
-	try {
-		if (!WebAssembly.validate(simd)) {
-			return 'js' // no SIMD
-		}
-	} catch {
-		return 'js' // JS only
+	if (!WebAssembly.validate(simd)) {
+		return 'js' // no SIMD or BULK MEMORY
 	}
 
 	try {
@@ -24,6 +29,6 @@ export async function detect(): Promise<Feature> {
 			return 'simd' // no WORKING FMA
 		}
 	} catch {
-		return 'simd' // JS + WASM + SIMD
+		return 'simd' // no RELAXED SIMD
 	}
 }

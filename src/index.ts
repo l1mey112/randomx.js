@@ -1,9 +1,5 @@
 import { detect, type Feature } from './detect/detect'
 
-import { run } from './blake2b'
-
-run()
-
 type Cache = {}
 
 export async function calculate_cache(key: Uint8Array): Promise<Cache> {
@@ -34,4 +30,4 @@ export async function calculate_hash(input: Uint8Array, cache?: Cache | null, fe
 	return new Uint8Array(32)
 }
 
-//calculate_hash(new Uint8Array([3, 2]))
+calculate_hash(new Uint8Array([3, 2]))
