@@ -23,5 +23,9 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@types/blake2b": "^2.1.3",
+    "blake2b": "^2.1.4"
   }
 }

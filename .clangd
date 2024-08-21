@@ -1,0 +1,6 @@
+CompileFlags:
+  Add: [-xc, -Wall, -Wextra, -Wshadow, -Xclang, -I./include]
+  Compiler: clang
+
+Diagnostics:
+  Suppress: "-Wunknown-attributes"
