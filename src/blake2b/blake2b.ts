@@ -1,9 +1,5 @@
-import { type Feature } from "../detect/detect";
+import blake2b from './main'
 
-export function choose(feature: Feature) {
-	if (feature === 'js') {
-		return import('./main.c.js')
-	} else {
-		return import('./main.c.wasm')
-	}
-}
+blake2b('js').then(mod => {
+	console.log(mod.memory)
+})

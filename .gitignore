@@ -1,4 +1,6 @@
+*main.js
 *.wasm
+*.wasmjs.js
 *.asmjs.js
 
 *.c.wasm
