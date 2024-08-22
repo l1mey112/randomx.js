@@ -4,7 +4,7 @@ import { dtsPlugin } from 'esbuild-plugin-d.ts'
 import { $ } from 'bun'
 import path from 'node:path'
 
-let wat_plugin = {
+const wat_plugin: esbuild.Plugin = {
 	name: 'wat-embed',
 	setup(build: esbuild.PluginBuild) {
 		build.onResolve({ filter: /\.wat\?embed$/ }, args => {
@@ -31,21 +31,45 @@ let wat_plugin = {
 	}
 }
 
-const opt: BuildOptions = {
-	entryPoints: ['src/index.ts'],
+
+const com: BuildOptions = {
 	sourcemap: true,
 	minify: true,
 	bundle: true,
-	plugins: [wat_plugin]
+}
+
+const esm_to_cjs: esbuild.Plugin = {
+	name: 'esm-to-cjs',
+	setup(build) {
+		build.onEnd(async (result) => {
+			const out_files = Object.keys(result.metafile?.outputs ?? {})
+			const js_files = out_files.filter((f) => f.endsWith('js'))
+
+			await esbuild.build({
+				...com,
+				outdir: build.initialOptions.outdir,
+				entryPoints: js_files,
+				allowOverwrite: true,
+				format: 'cjs',
+				logLevel: 'error',
+			})
+		})
+	},
+}
+
+const opt: BuildOptions = {
+	...com,
+	entryPoints: ['src/index.ts'],
 }
 
 await esbuild.build({
 	...opt,
 	outdir: 'dist/web',
-	target: ['chrome58', 'firefox57', 'safari11'],
-	format: 'iife',
+	target: ['chrome61', 'firefox60', 'safari11'],
 	platform: 'browser',
-	globalName: 'randomx'
+	format: 'esm',
+	splitting: true,
+	plugins: [wat_plugin]
 })
 
 await esbuild.build({
@@ -53,7 +77,10 @@ await esbuild.build({
 	outdir: 'dist/cjs',
 	target: ['node19'],
 	platform: 'neutral',
-	format: 'cjs',
+	format: 'esm',
+	splitting: true,
+	metafile: true,
+	plugins: [wat_plugin, esm_to_cjs]
 })
 
 await esbuild.build({
@@ -61,5 +88,7 @@ await esbuild.build({
 	outdir: 'dist/esm',
 	target: ['node19'],
 	platform: 'node',
-	format: 'esm'
-})
+	format: 'esm',
+	splitting: true,
+	plugins: [wat_plugin]
+}) 
