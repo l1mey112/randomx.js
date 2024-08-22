@@ -1,5 +1,5 @@
-import fma from './fma.wat?embed'
-import simd from './simd.wat?embed'
+import fma from './fma.wasm'
+import simd from './simd.wasm'
 
 /* type FeatureBase =
 	| 'js'   // JS only (asm.js where possible)

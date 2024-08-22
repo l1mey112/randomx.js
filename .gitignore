@@ -1,3 +1,9 @@
+*.wasm
+*.asmjs.js
+
+*.c.wasm
+*.c.js
+
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
 # Logs

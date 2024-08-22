@@ -1,5 +1,7 @@
 import { detect, type Feature } from './detect/detect'
 
+import { choose } from './blake2b/blake2b'
+
 type Cache = {}
 
 export async function calculate_cache(key: Uint8Array): Promise<Cache> {
@@ -15,6 +17,8 @@ export async function calculate_hash(input: Uint8Array, cache?: Cache | null, fe
 	if (!features) {
 		features = await detect()
 	}
+
+	console.log(choose(features))
 
 	if (features === 'js') {
 		throw Error('Unimplemented for `js` featureset')
