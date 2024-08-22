@@ -17,20 +17,21 @@ endef
 define wasmjs_template
 import wasm from './main.wasm'
 
-export async function exports() {
-	const mod = await WebAssembly.instantiate(wasm)
+export async function exports(imports) {
+	const mod = await WebAssembly.instantiate(wasm, imports)
 	return mod.instance.exports
 }
 endef
 
 define js_template
-export default async function main(feature) {
+export default async function main(feature, imports) {
+	imports ??= {}
 	if (feature === 'js') {
 		const m = await import('./main.asmjs')
-		return m
+		return m.asmFunc(imports)
 	} else {
 		const m = await import('./main.wasmjs')
-		return await m.exports()
+		return await m.exports({ env: imports })
 	}
 }
 endef
@@ -51,10 +52,11 @@ all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM
 
 %main.asmjs.js: %main.wasm
 	wasm2js -all $< -o $@
+	sed -i 's/function asmFunc(env) {/export function asmFunc(env) {"use asm";/' $@
+	perl -0777 -i -pe 's/var retasmFunc.*//igs' $@
 
 %main.wasmjs.js: %main.wasm
-	echo -e "$(subst $(newline),\n,${wasmjs_template})" > $@
+	printf "$(subst $(newline),\n,${wasmjs_template})" > $@
 
 %main.js: %main.asmjs.js %main.wasmjs.js
-	echo -e "$(subst $(newline),\n,${js_template})" > $@
-	
+	printf "$(subst $(newline),\n,${js_template})" > $@

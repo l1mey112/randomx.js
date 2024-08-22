@@ -7,4 +7,4 @@ type Module = {
 	my_memcpy: (a: number, b: number, c: number) => void
 }
 
-declare export default async function main(feature: Feature): Promise<Module>
+declare export default async function main(feature: Feature, imports?: WebAssembly.ModuleImports): Promise<Module>
