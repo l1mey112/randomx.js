@@ -9,6 +9,8 @@ if (k.exitCode !== 0) {
 	process.exit(k.exitCode)
 }
 
+await $`rm -rf dist`
+
 const com: BuildOptions = {
 	sourcemap: true,
 	minify: true,
