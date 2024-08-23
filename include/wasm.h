@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 #define WASM_IMPORT(module, name) \
 	__attribute__((import_module(module), import_name(name)))
 

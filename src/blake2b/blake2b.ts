@@ -1,7 +1,12 @@
 import { type Feature } from '../detect/detect';
 import main from './main'
 
-export async function blake2b(feature: Feature) {
+export type Blake2b = {
+	hash256(data: Uint8Array, key?: Uint8Array): Uint8Array;
+	hash512(data: Uint8Array, key?: Uint8Array): Uint8Array;
+}
+
+async function create_blake2b(feature: Feature): Promise<Blake2b> {
 	const module = await main(feature)
 
 	// #define SCRATCH_SIZE 52 * 1024
@@ -46,4 +51,20 @@ export async function blake2b(feature: Feature) {
 			return hash(data, 64, key)
 		}
 	}
+}
+
+let cache_js: any
+let cache_wasm: any
+
+export async function blake2b(feature: Feature): Promise<Blake2b> {
+	if (feature === 'js') {
+		if (!cache_js) {
+			cache_js = await create_blake2b('js')
+		}
+		return cache_js
+	}
+	if (!cache_wasm) {
+		cache_wasm = await create_blake2b(feature)
+	}
+	return cache_wasm
 }
