@@ -5,7 +5,7 @@ import { random } from 'nanoid'
 const wasm_module = await blake2b('simd')
 const js_module = await blake2b('js')
 
-test('wasm.256', () => {	
+test('wasm.256', () => {
 	for (let i = 0; i < 1024; i++) {
 		const bytes = random(i)
 		
@@ -33,7 +33,7 @@ test('wasm.512', () => {
 	}
 })
 
-test('js.256', () => {	
+test('js.256', () => {
 	for (let i = 0; i < 1024; i++) {
 		const bytes = random(i)
 		
