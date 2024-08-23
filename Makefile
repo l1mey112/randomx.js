@@ -64,7 +64,7 @@ all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM
 
 %main.asmjs.js: %main.asmjs.wasm
 	wasm2js -all $< -o $@
-	sed -i 's/function asmFunc(env) {/export function asmFunc(env) {"use asm";/' $@
+	sed -i 's/function asmFunc(\(.*\)) {/export function asmFunc(\1) {"use asm";/' $@
 	perl -0777 -i -pe 's/var retasmFunc.*//igs' $@
 
 %main.wasmjs.js: %main.wasm
