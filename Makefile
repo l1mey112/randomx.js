@@ -5,6 +5,7 @@ WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
 
 MAIN_C_SOURCES := $(shell find . -type f -name 'main.c' -not -path './node_modules/*')
 MAIN_C_WASM_FILES := $(patsubst %.c,%.wasm,$(MAIN_C_SOURCES))
+MAIN_C_WASM_NO_OPT_FILES := $(patsubst %.c,%.asmjs.wasm,$(MAIN_C_SOURCES))
 MAIN_C_ASM_JS_FILES := $(patsubst %.c,%.asmjs.js,$(MAIN_C_SOURCES))
 MAIN_C_WASM_JS_FILES := $(patsubst %.c,%.wasmjs.js,$(MAIN_C_SOURCES))
 MAIN_C_JS_FILES := $(patsubst %.c,%.js,$(MAIN_C_SOURCES))
@@ -36,7 +37,7 @@ export default async function main(feature, imports) {
 }
 endef
 
-all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM_JS_FILES) $(MAIN_C_JS_FILES)
+all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM_JS_FILES) $(MAIN_C_JS_FILES) $(MAIN_C_WASM_NO_OPT_FILES)
 
 %.wasm: %.wat
 	wat2wasm --enable-all $< -o $@
@@ -50,7 +51,18 @@ all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM
 	wasm-strip $@
 	wasm-opt -all -O4 -Oz $@ -o $@
 
-%main.asmjs.js: %main.wasm
+# no -msimd128 as that causes unaligned load crashes in wasm2js
+# use DWASM_NO_OPT to reduce code size by disabling unrolling etc
+%main.asmjs.wasm: %main.c
+	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
+		-Oz -mbulk-memory \
+		-Wl,--no-entry -Wl,-z,stack-size=8192 \
+		-o $@ $< -DWASM_NO_OPT
+
+	wasm-strip $@
+	wasm-opt -all -Oz $@ -o $@
+
+%main.asmjs.js: %main.asmjs.wasm
 	wasm2js -all $< -o $@
 	sed -i 's/function asmFunc(env) {/export function asmFunc(env) {"use asm";/' $@
 	perl -0777 -i -pe 's/var retasmFunc.*//igs' $@
