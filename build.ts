@@ -1,6 +1,5 @@
 import esbuild from 'esbuild'
 import type { BuildOptions } from 'esbuild'
-import { dtsPlugin } from 'esbuild-plugin-d.ts'
 import { $ } from 'bun'
 
 const k = await $`make`.nothrow() // make all
@@ -75,4 +74,6 @@ await esbuild.build({
 	format: 'esm',
 	splitting: true,
 	plugins: [...plug]
-}) 
+})
+
+await $`bunx tsc src/index.ts --declaration --emitDeclarationOnly --skipLibCheck --outFile dist/index.d.ts`.nothrow()

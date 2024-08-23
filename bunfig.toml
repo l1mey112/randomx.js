@@ -1,0 +1,4 @@
+preload = ["./binaryloader.ts"]
+
+[test]
+preload = ["./binaryloader.ts"]

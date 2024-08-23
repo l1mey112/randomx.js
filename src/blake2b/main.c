@@ -231,14 +231,9 @@ uint8_t *scratch(void) {
 	return scratch_buffer;
 }
 
-WASM_EXPORT("blake2b_init_512")
-void init_512(uint32_t keylen) {
-	blake2b_init_key(64, scratch_buffer, keylen);
-}
-
-WASM_EXPORT("blake2b_init_256")
-void init_256(uint32_t keylen) {
-	blake2b_init_key(32, scratch_buffer, keylen);
+WASM_EXPORT("blake2b_init")
+void init(uint32_t outlen, uint32_t keylen) {
+	blake2b_init_key(outlen, scratch_buffer, keylen);
 }
 
 WASM_EXPORT("blake2b_update")

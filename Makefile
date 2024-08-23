@@ -55,9 +55,9 @@ all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM
 # use DWASM_NO_OPT to reduce code size by disabling unrolling etc
 %main.asmjs.wasm: %main.c
 	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
-		-Oz -mbulk-memory \
+		-Oz -mbulk-memory -DWASM_NO_OPT \
 		-Wl,--no-entry -Wl,-z,stack-size=8192 \
-		-o $@ $< -DWASM_NO_OPT
+		-o $@ $<
 
 	wasm-strip $@
 	wasm-opt -all -Oz $@ -o $@

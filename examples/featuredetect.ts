@@ -1,1 +1,0 @@
-import '../dist/cjs/index'

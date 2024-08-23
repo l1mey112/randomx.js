@@ -11,12 +11,12 @@ export async function calculate_cache(key: Uint8Array): Promise<Cache> {
 }
 
 // returns 32 byte Uint8Array
-export async function calculate_hash(input: Uint8Array, cache?: Cache | null, features?: Feature | null): Promise<Uint8Array> {
-	if (!features) {
-		features = await detect()
+export async function calculate_hash(input: Uint8Array, cache?: Cache | null, feature?: Feature | null): Promise<Uint8Array> {
+	if (!feature) {
+		feature = await detect()
 	}
 
-	if (features === 'js') {
+	if (feature === 'js') {
 		throw Error('Unimplemented for `js` featureset')
 	}
 
