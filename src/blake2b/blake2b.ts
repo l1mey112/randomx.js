@@ -1,9 +1,11 @@
 import { type Feature } from '../detect/detect';
-import main from './main'
+import main, { type Module } from './main'
 
 export type Blake2b = {
-	hash256(data: Uint8Array, key?: Uint8Array): Uint8Array;
-	hash512(data: Uint8Array, key?: Uint8Array): Uint8Array;
+	hash256(data: Uint8Array, key?: Uint8Array): Uint8Array
+	hash512(data: Uint8Array, key?: Uint8Array): Uint8Array
+	module: Module
+	scratch: Uint8Array
 }
 
 async function create_blake2b(feature: Feature): Promise<Blake2b> {
@@ -49,7 +51,9 @@ async function create_blake2b(feature: Feature): Promise<Blake2b> {
 		},
 		hash512(data: Uint8Array, key?: Uint8Array) {
 			return hash(data, 64, key)
-		}
+		},
+		module,
+		scratch: buffer
 	}
 }
 

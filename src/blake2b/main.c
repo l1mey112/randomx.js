@@ -13,19 +13,7 @@ enum blake2b_constant {
 	BLAKE2B_PERSONALBYTES = 16
 };
 
-typedef struct blake2b_state__ {
-	uint64_t h[8];
-	uint64_t t[2];
-	uint64_t f[2];
-	uint8_t buf[BLAKE2B_BLOCKBYTES];
-	int buflen;
-	int outlen;
-	uint8_t last_node;
-} blake2b_state;
-
-blake2b_state S[1];
-
-struct blake2b_param__ {
+typedef struct blake2b_param__ {
 	uint8_t digest_length;                   /* 1 */
 	uint8_t key_length;                      /* 2 */
 	uint8_t fanout;                          /* 3 */
@@ -38,10 +26,19 @@ struct blake2b_param__ {
 	uint8_t reserved[14];                    /* 32 */
 	uint8_t salt[BLAKE2B_SALTBYTES];         /* 48 */
 	uint8_t personal[BLAKE2B_PERSONALBYTES]; /* 64 */
-} __attribute__((packed));
+} __attribute__((packed)) blake2b_param;
 
-typedef struct blake2b_param__ blake2b_param;
+typedef struct blake2b_state__ {
+	uint64_t h[8];
+	uint64_t t[2];
+	uint64_t f[2];
+	uint8_t buf[BLAKE2B_BLOCKBYTES];
+	int buflen;
+	int outlen;
+	uint8_t last_node;
+} blake2b_state;
 
+blake2b_state S[1];
 blake2b_param P[1];
 
 static inline uint64_t load64(const void *src) {
@@ -124,12 +121,12 @@ static void blake2b_compress(const uint8_t block[BLAKE2B_BLOCKBYTES]) {
 	uint64_t m[16];
 	uint64_t v[16];
 
-WASM_UNROLL
+	WASM_UNROLL
 	for (int i = 0; i < 16; ++i) {
 		m[i] = load64(block + i * sizeof(m[i]));
 	}
 
-WASM_UNROLL
+	WASM_UNROLL
 	for (int i = 0; i < 8; ++i) {
 		v[i] = S->h[i];
 	}
@@ -143,12 +140,12 @@ WASM_UNROLL
 	v[14] = blake2b_IV[6] ^ S->f[0];
 	v[15] = blake2b_IV[7] ^ S->f[1];
 
-WASM_UNROLL
+	WASM_UNROLL
 	for (int i = 0; i < 12; ++i) {
 		round(i, m, v);
 	}
 
-WASM_UNROLL
+	WASM_UNROLL
 	for (int i = 0; i < 8; ++i) {
 		S->h[i] = S->h[i] ^ v[i] ^ v[i + 8];
 	}
@@ -264,4 +261,19 @@ void finalise() {
 	for (uint8_t i = 0; i < S->outlen; i++) {
 		scratch_buffer[i] = buffer[i];
 	}
+}
+
+WASM_EXPORT("blake2b_oneshot_long1024")
+uint32_t blake2b_oneshot_long1024(void) {
+	/* uint32_t toproduce;
+	uint8_t out_buffer[BLAKE2B_OUTBYTES];
+	uint8_t in_buffer[BLAKE2B_OUTBYTES];
+
+	uint32_t outlen = 1024;
+
+	blake2b_init_key(BLAKE2B_OUTBYTES, NULL, 0);
+	blake2b_update(&outlen, sizeof(outlen)); // bytes
+	blake2b_update(scratch_buffer) */
+
+
 }
