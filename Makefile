@@ -43,7 +43,7 @@ endef
 all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM_JS_FILES) $(MAIN_C_JS_FILES) $(MAIN_C_WASM_NO_OPT_FILES)
 
 include/configuration.h: include/configuration.ts
-	sed 's/export const /#define /; s/ = / /; s/;//' $< > $@
+	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
 
 %.wasm: %.wat
 	wat2wasm --enable-all $< -o $@
