@@ -10,6 +10,9 @@ MAIN_C_ASM_JS_FILES := $(patsubst %.c,%.asmjs.js,$(MAIN_C_SOURCES))
 MAIN_C_WASM_JS_FILES := $(patsubst %.c,%.wasmjs.js,$(MAIN_C_SOURCES))
 MAIN_C_JS_FILES := $(patsubst %.c,%.js,$(MAIN_C_SOURCES))
 
+HEADER_FILES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
+HEADER_FILES += include/configuration.h
+
 define newline
 
 
@@ -39,10 +42,13 @@ endef
 
 all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM_JS_FILES) $(MAIN_C_JS_FILES) $(MAIN_C_WASM_NO_OPT_FILES)
 
+include/configuration.h: include/configuration.ts
+	sed 's/export const /#define /; s/ = / /; s/;//' $< > $@
+
 %.wasm: %.wat
 	wat2wasm --enable-all $< -o $@
 
-%main.wasm: %main.c
+%main.wasm: %main.c $(HEADER_FILES)
 	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 		-O3 -msimd128 -mbulk-memory \
 		-Wl,--no-entry -Wl,-z,stack-size=8192 \
@@ -53,7 +59,7 @@ all: $(WAT_WASM_FILES) $(MAIN_C_WASM_FILES) $(MAIN_C_ASM_JS_FILES) $(MAIN_C_WASM
 
 # no -msimd128 as that causes unaligned load crashes in wasm2js
 # use DWASM_NO_OPT to reduce code size by disabling unrolling etc
-%main.asmjs.wasm: %main.c
+%main.asmjs.wasm: %main.c $(HEADER_FILES)
 	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 		-Oz -mbulk-memory -DWASM_NO_OPT \
 		-Wl,--no-entry -Wl,-z,stack-size=8192 \

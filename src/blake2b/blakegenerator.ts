@@ -1,3 +1,4 @@
+import { load32 } from "../utils";
 import { type Blake2b } from "./blake2b";
 
 export function blakegenerator(blake2b: Blake2b, seed?: Uint8Array) {
@@ -26,7 +27,7 @@ export function blakegenerator(blake2b: Blake2b, seed?: Uint8Array) {
 				state = blake2b.hash512(state)
 				p = 0
 			}
-			const word = state[p] | state[p + 1] << 8 | state[p + 2] << 16 | state[p + 3] << 24
+			const word = load32(state, p)
 			p += 4
 			return word
 		},

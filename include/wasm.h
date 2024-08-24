@@ -9,6 +9,8 @@
 #define memcpy __builtin_memcpy // bulk-memory
 #define memset __builtin_memset // bulk-memory
 
+#define NULL ((void*)0)
+
 #define alignas _Alignas
 
 #ifndef WASM_NO_OPT

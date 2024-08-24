@@ -1,3 +1,4 @@
+include/configuration.h
 *main.js
 *.wasm
 *.wasmjs.js

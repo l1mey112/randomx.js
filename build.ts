@@ -76,4 +76,4 @@ await esbuild.build({
 	plugins: [...plug]
 })
 
-await $`bunx tsc src/index.ts --declaration --emitDeclarationOnly --skipLibCheck --outFile dist/index.d.ts`.nothrow()
+await $`bunx tsc src/index.ts src/module.d.ts --declaration --emitDeclarationOnly --skipLibCheck --outFile dist/index.d.ts`.nothrow()
