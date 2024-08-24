@@ -24,5 +24,5 @@
 
 #include <stdint.h>
 
-int printf(const char *restrict format, ...);
-int snprintf(char *restrict str, uint32_t size, const char *restrict format, ...);
+int printf(const char *restrict format, ...) __attribute__((format(printf, 1, 2)));
+int snprintf(char *restrict str, uint32_t size, const char *restrict format, ...) __attribute__((format(printf, 3, 4)));
