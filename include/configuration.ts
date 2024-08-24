@@ -19,12 +19,10 @@ export const RANDOMX_SCRATCHPAD_L2 = 262144         // Scratchpad L2 size in byt
 export const RANDOMX_SCRATCHPAD_L1 = 16384          // Scratchpad L1 size in bytes
 
 export type Feature =
-	| 0 // JS only (asm.js where possible)
-	| 1 // JS + WASM + SIMD + BULK MEMORY
-	| 2 // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
+	| 0 // JS + WASM + SIMD + BULK MEMORY
+	| 1 // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
 
-export const FEATURE_JS = 0
-export const FEATURE_SIMD = 1
-export const FEATURE_FMA = 2
+export const FEATURE_SIMD = 0
+export const FEATURE_FMA = 1
 
 export const IO_BUFFER_SIZE = 1024 // 1 KiB for key input, hash input, output

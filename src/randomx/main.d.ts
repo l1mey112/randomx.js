@@ -11,4 +11,4 @@ export type Module = {
 	R(): void
 }
 
-declare export default async function main(feature: Feature, imports?: WebAssembly.ModuleImports): Promise<Module>
+declare export default async function main(imports: WebAssembly.ModuleImports): Promise<Module>

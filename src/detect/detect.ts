@@ -1,10 +1,14 @@
-import { FEATURE_FMA, FEATURE_JS, FEATURE_SIMD, type Feature } from '../../include/configuration'
+import { FEATURE_FMA, FEATURE_SIMD, type Feature } from '../../include/configuration'
 import fma from './fma.wasm'
 import simd from './simd.wasm'
 
 export async function detect(): Promise<Feature> {
-	if (!WebAssembly.validate(simd)) {
-		return FEATURE_JS // no SIMD or BULK MEMORY
+	try {
+		if (!WebAssembly.validate(simd)) {
+			throw null
+		}
+	} catch {
+		throw new Error('no WASM, SIMD or BULK MEMORY')
 	}
 
 	try {

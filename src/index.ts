@@ -3,7 +3,7 @@ import { detect } from "./detect/detect";
 import { env_npf_putc } from "./printf";
 import randomx_main, { type Module } from './randomx/main'
 
-type FeatureFlag = 'js' | 'simd' | 'fma'
+type FeatureFlag = 'simd' | 'fma'
 
 class RandomX {
 	private randomx: Module
@@ -61,9 +61,8 @@ export default async function randomx(params?: { feature_flag?: FeatureFlag }) {
 
 	if (feature_flag) {
 		const hf_table: Record<FeatureFlag, Feature> = {
-			'js': 0,
-			'simd': 1,
-			'fma': 2,
+			'simd': 0,
+			'fma': 1,
 		}
 
 		feature = hf_table[feature_flag]
@@ -71,9 +70,7 @@ export default async function randomx(params?: { feature_flag?: FeatureFlag }) {
 		feature = await detect()
 	}
 
-	console.log('feature:', feature)
-	const module = await randomx_main(feature, { ch: env_npf_putc })
-	console.log('feature:', feature)
+	const module = await randomx_main({ ch: env_npf_putc })
 
 	return new RandomX(feature, module)
 }
