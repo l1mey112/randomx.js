@@ -1,9 +1,9 @@
 import { IO_BUFFER_SIZE, type Feature } from "../include/configuration";
 import { detect } from "./detect/detect";
+import { env_npf_putc } from "./printf";
 import randomx_main, { type Module } from './randomx/main'
 
 type FeatureFlag = 'js' | 'simd' | 'fma'
-
 
 class RandomX {
 	private randomx: Module
@@ -28,7 +28,7 @@ class RandomX {
 			this.B.set(key)
 		}
 
-		this.randomx.K(key?.length ?? 0)		
+		this.randomx.K(key?.length ?? 0) // install key K		
 		this.loaded_cache = true
 	}
 
@@ -37,8 +37,8 @@ class RandomX {
 			throw Error('Cache not loaded')
 		}
 
-		// install seed S
-
+		// install seed S from H
+		this.randomx.Hi()
 		let p = 0
 		while (p < input.length) {
 			const chunk = input.subarray(p, p + IO_BUFFER_SIZE)
@@ -48,12 +48,15 @@ class RandomX {
 		}
 		this.randomx.Hf()
 
-		this.randomx.R()
+		//this.randomx.R()
 	}
 }
 
 // new virtual machine
-export default async function randomx({ feature_flag }: { feature_flag?: FeatureFlag }) {
+export default async function randomx(params?: { feature_flag?: FeatureFlag }) {
+	params ??= {}
+	const { feature_flag } = params
+
 	let feature: Feature
 
 	if (feature_flag) {
@@ -68,7 +71,9 @@ export default async function randomx({ feature_flag }: { feature_flag?: Feature
 		feature = await detect()
 	}
 
-	const module = await randomx_main(feature, {})
+	console.log('feature:', feature)
+	const module = await randomx_main(feature, { ch: env_npf_putc })
+	console.log('feature:', feature)
 
 	return new RandomX(feature, module)
 }
