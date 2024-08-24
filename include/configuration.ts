@@ -1,6 +1,6 @@
 //#pragma once
 
-// RandomX
+// RandomX configuration
 export const RANDOMX_ARGON_MEMORY = 262144          // Number of 1 KiB Argon2 blocks in the Cache
 export const RANDOMX_ARGON_ITERATIONS = 3           // Number of Argon2d iterations for Cache initialization
 export const RANDOMX_ARGON_LANES = 1                // Number of parallel lanes for Cache initialization
@@ -20,8 +20,8 @@ export const RANDOMX_SCRATCHPAD_L1 = 16384          // Scratchpad L1 size in byt
 
 export type Feature =
 	| 0 // JS only (asm.js where possible)
-	| 1 // JS + WASM + SIMD + BULK MEMORY + MULTI MEMORY
-	| 2 // JS + WASM + SIMD + BULK MEMORY + MULTI MEMORY + WORKING FMA
+	| 1 // JS + WASM + SIMD + BULK MEMORY
+	| 2 // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
 
 export const FEATURE_JS = 0
 export const FEATURE_SIMD = 1
