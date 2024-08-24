@@ -17,10 +17,11 @@ define newline
 endef
 
 define js_template
+import wasm from './main.wasm'
+
 export default async function main(imports) {
 	imports = { "e": imports }
 
-	const wasm = await import('./main.wasm')
 	const mod = await WebAssembly.instantiate(wasm, imports)
 	return mod.instance.exports
 }
