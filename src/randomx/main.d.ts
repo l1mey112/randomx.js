@@ -5,6 +5,7 @@ export type Module = {
 
 	B(): number
 	K(key_length: number): void
+	Hi(): void
 	H(data_length: number): void
 	Hf(): void
 	R(): void

@@ -23,3 +23,6 @@ struct blake2b_state {
 void blake2b_init_key(blake2b_state *S, int outlen, const uint8_t *key, int keylen);
 void blake2b_update(blake2b_state *S, const void *pin, int inlen);
 void blake2b_finalise(blake2b_state *S, uint8_t buffer[BLAKE2B_OUTBYTES]);
+
+void blake2b(uint8_t *out, uint32_t outlen, const void *in, uint32_t inlen);
+void blake2b_1024(uint8_t *out, const void *in, uint32_t inlen);

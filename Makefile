@@ -31,12 +31,14 @@ endef
 define js_template
 export default async function main(feature, imports) {
 	imports ||= {}
+	imports = { "e": imports }
+	
 	if (feature === 0) {
 		const m = await import('./main.asmjs')
 		return m.asmFunc(imports)
 	} else {
 		const m = await import('./main.wasmjs')
-		return await m.exports({ env: imports })
+		return await m.exports(imports)
 	}
 }
 endef
@@ -60,9 +62,12 @@ include/configuration.h: include/configuration.ts
 
 # no -msimd128 as that causes unaligned load crashes in wasm2js
 # use DWASM_NO_OPT to reduce code size by disabling unrolling etc
+
+# -Oz/-Os BREAKS THE FUCKING JS EXECUTABLE
+
 %main.asmjs.wasm: $(C_SOURCES) $(HEADER_FILES)
 	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
-		-Oz -mbulk-memory -DWASM_NO_OPT \
+		-O -mbulk-memory -DWASM_NO_OPT \
 		-Wl,--no-entry -Wl,-z,stack-size=8192 \
 		-o $@ $(C_SOURCES)
 
@@ -71,6 +76,7 @@ include/configuration.h: include/configuration.ts
 
 %main.asmjs.js: %main.asmjs.wasm
 	wasm2js -all $< -o $@
+	sed -i '/^\s*import/ d' $@
 	sed -i 's/function asmFunc(\(.*\)) {/export function asmFunc(\1) {"use asm";/' $@
 	perl -0777 -i -pe 's/var retasmFunc.*//igs' $@
 

@@ -205,41 +205,41 @@ void blake2b_finalise(blake2b_state *S, uint8_t buffer[BLAKE2B_OUTBYTES]) {
 	memcpy(buffer, S->h, BLAKE2B_OUTBYTES);
 }
 
-/* WASM_EXPORT("blake2b_scratch")
-uint8_t *scratch(void) {
-	return scratch_buffer;
+void blake2b(uint8_t *out, uint32_t outlen, const void *in, uint32_t inlen) {
+	blake2b_state blake_state;
+
+	blake2b_init_key(&blake_state, outlen, NULL, 0);
+	blake2b_update(&blake_state, in, inlen);
+	blake2b_finalise(&blake_state, out);
 }
 
-WASM_EXPORT("blake2b_init")
-void init(uint32_t outlen, uint32_t keylen) {
-	blake2b_init_key(outlen, scratch_buffer, keylen);
+void blake2b_1024(uint8_t *out, const void *in, uint32_t inlen) {
+	blake2b_state blake_state;
+
+	blake2b_init_key(&blake_state, BLAKE2B_OUTBYTES, NULL, 0);
+
+	uint32_t toproduce;
+	uint8_t out_buffer[BLAKE2B_OUTBYTES];
+	uint8_t in_buffer[BLAKE2B_OUTBYTES];
+
+	uint32_t word = 1024;
+	blake2b_update(&blake_state, (uint8_t *)&word, sizeof(word));
+	blake2b_update(&blake_state, in, inlen);
+	blake2b_finalise(&blake_state, out_buffer);
+
+	memcpy(out, out_buffer, BLAKE2B_OUTBYTES / 2);
+	out += BLAKE2B_OUTBYTES / 2;
+	toproduce = (uint32_t)1024 - BLAKE2B_OUTBYTES / 2;
+
+	while (toproduce > BLAKE2B_OUTBYTES) {
+		memcpy(in_buffer, out_buffer, BLAKE2B_OUTBYTES);
+		blake2b(out_buffer, BLAKE2B_OUTBYTES, in_buffer, BLAKE2B_OUTBYTES);
+		memcpy(out, out_buffer, BLAKE2B_OUTBYTES / 2);
+		out += BLAKE2B_OUTBYTES / 2;
+		toproduce -= BLAKE2B_OUTBYTES / 2;
+	}
+
+	memcpy(in_buffer, out_buffer, BLAKE2B_OUTBYTES);
+	blake2b(out_buffer, BLAKE2B_OUTBYTES, in_buffer, toproduce);
+	memcpy(out, out_buffer, toproduce);
 }
-
-WASM_EXPORT("blake2b_update")
-void update(uint32_t size) {
-	blake2b_update(scratch_buffer, size);
-}
-
-WASM_EXPORT("blake2b_finalise")
-void finalise() {
-	uint8_t buffer[BLAKE2B_OUTBYTES] = {0};
-
-	if (blake2b_is_lastblock()) {
-		return;
-	}
-
-	blake2b_increment_counter(S->buflen);
-	blake2b_set_lastblock();
-	for (int i = 0; i < BLAKE2B_BLOCKBYTES - S->buflen; i++) {
-		(S->buf + S->buflen)[i] = 0;
-	}
-	blake2b_compress(S->buf);
-
-	for (int i = 0; i < 8; ++i) {
-		store64(buffer + sizeof(S->h[i]) * i, S->h[i]);
-	}
-
-	for (uint8_t i = 0; i < S->outlen; i++) {
-		scratch_buffer[i] = buffer[i];
-	}
-} */
