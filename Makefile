@@ -3,6 +3,7 @@
 WAT_SOURCES := $(shell find . -type f -name '*.wat' -not -path './node_modules/*')
 WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
 
+C_SOURCES := $(shell find . -type f -name '*.c' -not -path './node_modules/*')
 MAIN_C_SOURCES := $(shell find . -type f -name 'main.c' -not -path './node_modules/*')
 MAIN_C_WASM_FILES := $(patsubst %.c,%.wasm,$(MAIN_C_SOURCES))
 MAIN_C_WASM_NO_OPT_FILES := $(patsubst %.c,%.asmjs.wasm,$(MAIN_C_SOURCES))
@@ -29,8 +30,8 @@ endef
 
 define js_template
 export default async function main(feature, imports) {
-	imports ??= {}
-	if (feature === 'js') {
+	imports ||= {}
+	if (feature === 0) {
 		const m = await import('./main.asmjs')
 		return m.asmFunc(imports)
 	} else {
@@ -48,22 +49,22 @@ include/configuration.h: include/configuration.ts
 %.wasm: %.wat
 	wat2wasm --enable-all $< -o $@
 
-%main.wasm: %main.c $(HEADER_FILES)
+%main.wasm: $(C_SOURCES) $(HEADER_FILES)
 	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 		-O3 -msimd128 -mbulk-memory \
 		-Wl,--no-entry -Wl,-z,stack-size=8192 \
-		-o $@ $<
+		-o $@ $(C_SOURCES)
 
 	wasm-strip $@
 	wasm-opt -all -O4 -Oz $@ -o $@
 
 # no -msimd128 as that causes unaligned load crashes in wasm2js
 # use DWASM_NO_OPT to reduce code size by disabling unrolling etc
-%main.asmjs.wasm: %main.c $(HEADER_FILES)
+%main.asmjs.wasm: $(C_SOURCES) $(HEADER_FILES)
 	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 		-Oz -mbulk-memory -DWASM_NO_OPT \
 		-Wl,--no-entry -Wl,-z,stack-size=8192 \
-		-o $@ $<
+		-o $@ $(C_SOURCES)
 
 	wasm-strip $@
 	wasm-opt -all -Oz $@ -o $@

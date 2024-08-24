@@ -1,17 +1,13 @@
 #include "wasm.h"
+#include "blake2b.h"
+
 #include <stdint.h>
 
-// we allocate 64KiBs, might as well use it
-#define SCRATCH_SIZE 52 * 1024
-alignas(128) uint8_t scratch_buffer[SCRATCH_SIZE];
-
-enum blake2b_constant {
-	BLAKE2B_BLOCKBYTES = 128,
-	BLAKE2B_OUTBYTES = 64,
-	BLAKE2B_KEYBYTES = 64,
-	BLAKE2B_SALTBYTES = 16,
-	BLAKE2B_PERSONALBYTES = 16
-};
+#define BLAKE2B_BLOCKBYTES 128
+#define BLAKE2B_OUTBYTES 64
+#define BLAKE2B_KEYBYTES 64
+#define BLAKE2B_SALTBYTES 16
+#define BLAKE2B_PERSONALBYTES 16
 
 typedef struct blake2b_param__ {
 	uint8_t digest_length;                   /* 1 */
@@ -28,30 +24,7 @@ typedef struct blake2b_param__ {
 	uint8_t personal[BLAKE2B_PERSONALBYTES]; /* 64 */
 } __attribute__((packed)) blake2b_param;
 
-typedef struct blake2b_state__ {
-	uint64_t h[8];
-	uint64_t t[2];
-	uint64_t f[2];
-	uint8_t buf[BLAKE2B_BLOCKBYTES];
-	int buflen;
-	int outlen;
-	uint8_t last_node;
-} blake2b_state;
-
-blake2b_state S[1];
-blake2b_param P[1];
-
-static inline uint64_t load64(const void *src) {
-	return *(uint64_t *)src;
-}
-
-static inline void store64(void *dst, uint64_t w) {
-	*(uint64_t *)dst = w;
-}
-
-static inline uint64_t rotr64(const uint64_t w, const unsigned c) {
-	return (w >> c) | (w << (64 - c));
-}
+// wasm is little endian, you don't need to use store64 and load64 to mask endianness
 
 static const uint64_t blake2b_IV[8] = {
 	0x6a09e667f3bcc908ULL, 0xbb67ae8584caa73bULL,
@@ -73,23 +46,22 @@ static const uint8_t blake2b_sigma[12][16] = {
 	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
 	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3}};
 
-static inline void blake2b_set_lastnode() {
+static inline void blake2b_set_lastnode(blake2b_state *S) {
 	S->f[1] = (uint64_t)-1;
 }
 
-/* Some helper functions, not necessarily useful */
-static inline int blake2b_is_lastblock() {
+static inline int blake2b_is_lastblock(blake2b_state *S) {
 	return S->f[0] != 0;
 }
 
-static inline void blake2b_set_lastblock() {
+static inline void blake2b_set_lastblock(blake2b_state *S) {
 	if (S->last_node)
-		blake2b_set_lastnode();
+		blake2b_set_lastnode(S);
 
 	S->f[0] = (uint64_t)-1;
 }
 
-static inline void blake2b_increment_counter(const uint64_t inc) {
+static inline void blake2b_increment_counter(blake2b_state *S, const uint64_t inc) {
 	S->t[0] += inc;
 	S->t[1] += (S->t[0] < inc);
 }
@@ -117,19 +89,12 @@ static void round(uint32_t r, uint64_t m[16], uint64_t v[16]) {
 	G(r, 7, v[3], v[4], v[9], v[14]);
 };
 
-static void blake2b_compress(const uint8_t block[BLAKE2B_BLOCKBYTES]) {
+static void blake2b_compress(blake2b_state *S, const uint8_t block[BLAKE2B_BLOCKBYTES]) {
 	uint64_t m[16];
 	uint64_t v[16];
 
-	WASM_UNROLL
-	for (int i = 0; i < 16; ++i) {
-		m[i] = load64(block + i * sizeof(m[i]));
-	}
-
-	WASM_UNROLL
-	for (int i = 0; i < 8; ++i) {
-		v[i] = S->h[i];
-	}
+	memcpy(m, block, sizeof(m));
+	memcpy(v, S->h, sizeof(v));
 
 	v[8] = blake2b_IV[0];
 	v[9] = blake2b_IV[1];
@@ -153,7 +118,7 @@ static void blake2b_compress(const uint8_t block[BLAKE2B_BLOCKBYTES]) {
 
 #undef G
 
-void blake2b_update(const void *pin, int inlen) {
+void blake2b_update(blake2b_state *S, const void *pin, int inlen) {
 	const unsigned char *in = (const unsigned char *)pin;
 	if (inlen > 0) {
 		int left = S->buflen;
@@ -164,13 +129,13 @@ void blake2b_update(const void *pin, int inlen) {
 			for (uint8_t i = 0; i < fill; i++) {
 				S->buf[left + i] = in[i];
 			}
-			blake2b_increment_counter(BLAKE2B_BLOCKBYTES);
-			blake2b_compress(S->buf); /* Compress */
+			blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
+			blake2b_compress(S, S->buf); /* Compress */
 			in += fill;
 			inlen -= fill;
 			while (inlen > BLAKE2B_BLOCKBYTES) {
-				blake2b_increment_counter(BLAKE2B_BLOCKBYTES);
-				blake2b_compress(in);
+				blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
+				blake2b_compress(S, in);
 				in += BLAKE2B_BLOCKBYTES;
 				inlen -= BLAKE2B_BLOCKBYTES;
 			}
@@ -182,7 +147,7 @@ void blake2b_update(const void *pin, int inlen) {
 	}
 }
 
-void blake2b_init0() {
+void blake2b_init0(blake2b_state *S) {
 	memset(S, 0, sizeof(blake2b_state));
 
 	for (int i = 0; i < 8; ++i) {
@@ -191,27 +156,29 @@ void blake2b_init0() {
 }
 
 /* init xors IV with input parameter block */
-void blake2b_init_param() {
+void blake2b_init_param(blake2b_state *S, blake2b_param *P) {
 	const uint8_t *p = (const uint8_t *)(P);
 	int i;
 
-	blake2b_init0();
+	blake2b_init0(S);
 
 	/* IV XOR ParamBlock */
 	for (i = 0; i < 8; ++i) {
-		S->h[i] ^= load64(p + sizeof(S->h[i]) * i);
+		S->h[i] ^= ((uint64_t *)p)[i];
 	}
 
 	S->outlen = P->digest_length;
 }
 
-void blake2b_init_key(int outlen, const uint8_t *key, int keylen) {
+void blake2b_init_key(blake2b_state *S, int outlen, const uint8_t *key, int keylen) {
+	blake2b_param P[1];
+	
 	P->digest_length = (uint8_t)outlen;
 	P->key_length = (uint8_t)keylen;
 	P->fanout = 1;
 	P->depth = 1;
 
-	blake2b_init_param();
+	blake2b_init_param(S, P);
 
 	if (keylen > 0) {
 		uint8_t block[BLAKE2B_BLOCKBYTES];
@@ -219,11 +186,26 @@ void blake2b_init_key(int outlen, const uint8_t *key, int keylen) {
 		for (uint8_t i = 0; i < keylen; i++) {
 			block[i] = key[i];
 		}
-		blake2b_update(block, BLAKE2B_BLOCKBYTES);
+		blake2b_update(S, block, BLAKE2B_BLOCKBYTES);
 	}
 }
 
-WASM_EXPORT("blake2b_scratch")
+void blake2b_finalise(blake2b_state *S, uint8_t buffer[BLAKE2B_OUTBYTES]) {
+	if (blake2b_is_lastblock(S)) {
+		return;
+	}
+
+	blake2b_increment_counter(S, S->buflen);
+	blake2b_set_lastblock(S);
+	for (int i = 0; i < BLAKE2B_BLOCKBYTES - S->buflen; i++) {
+		(S->buf + S->buflen)[i] = 0;
+	}
+	blake2b_compress(S, S->buf);
+
+	memcpy(buffer, S->h, BLAKE2B_OUTBYTES);
+}
+
+/* WASM_EXPORT("blake2b_scratch")
 uint8_t *scratch(void) {
 	return scratch_buffer;
 }
@@ -248,32 +230,16 @@ void finalise() {
 
 	blake2b_increment_counter(S->buflen);
 	blake2b_set_lastblock();
-	for (int i = 0; i < BLAKE2B_BLOCKBYTES - S->buflen; i++) { /* Padding */
+	for (int i = 0; i < BLAKE2B_BLOCKBYTES - S->buflen; i++) {
 		(S->buf + S->buflen)[i] = 0;
 	}
 	blake2b_compress(S->buf);
 
 	for (int i = 0; i < 8; ++i) {
-		/* Output full hash to temp buffer */
 		store64(buffer + sizeof(S->h[i]) * i, S->h[i]);
 	}
 
 	for (uint8_t i = 0; i < S->outlen; i++) {
 		scratch_buffer[i] = buffer[i];
 	}
-}
-
-WASM_EXPORT("blake2b_oneshot_long1024")
-uint32_t blake2b_oneshot_long1024(void) {
-	/* uint32_t toproduce;
-	uint8_t out_buffer[BLAKE2B_OUTBYTES];
-	uint8_t in_buffer[BLAKE2B_OUTBYTES];
-
-	uint32_t outlen = 1024;
-
-	blake2b_init_key(BLAKE2B_OUTBYTES, NULL, 0);
-	blake2b_update(&outlen, sizeof(outlen)); // bytes
-	blake2b_update(scratch_buffer) */
-
-
-}
+} */

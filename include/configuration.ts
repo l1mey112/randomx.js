@@ -26,3 +26,5 @@ export type Feature =
 export const FEATURE_JS = 0
 export const FEATURE_SIMD = 1
 export const FEATURE_FMA = 2
+
+export const IO_BUFFER_SIZE = 1024 // 1 KiB for key input, hash input, output
