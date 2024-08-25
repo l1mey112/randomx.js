@@ -13,6 +13,7 @@
 #define NULL ((void *)0)
 
 #define alignas _Alignas
+#define assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
 
 #ifndef WASM_NO_OPT
 #define WASM_UNROLL _Pragma("clang loop unroll(full)")
