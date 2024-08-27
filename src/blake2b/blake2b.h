@@ -9,6 +9,7 @@
 #define BLAKE2B_PERSONALBYTES 16
 
 typedef struct blake2b_state blake2b_state;
+typedef struct blake2b_generator_state blake2b_generator_state;
 
 struct blake2b_state {
 	uint64_t h[8];
@@ -26,3 +27,12 @@ void blake2b_finalise(blake2b_state *S, uint8_t buffer[BLAKE2B_OUTBYTES]);
 
 void blake2b(uint8_t *out, uint32_t outlen, const void *in, uint32_t inlen);
 void blake2b_1024(uint8_t *out, const void *in, uint32_t inlen);
+
+struct blake2b_generator_state {
+	uint8_t data[64];
+	uint32_t index;
+};
+
+void blake2b_generator_init(blake2b_generator_state *S, const uint8_t *seed, int seed_len);
+uint8_t blake2b_generator_u8(blake2b_generator_state *S);
+uint32_t blake2b_generator_u32(blake2b_generator_state *S);

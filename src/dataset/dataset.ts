@@ -16,7 +16,7 @@ export type Dataset = {
 	thunk?: Uint8Array
 }
 
-export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }): Dataset {
+export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }): Promise<Dataset> {
 	if (K.length > 60) {
 		throw new Error('Key length is too long (max 60 bytes)')
 	}
@@ -56,9 +56,10 @@ export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }
 	const cache_buffer = new Uint8Array(exports.memory.buffer, cache_begin, RANDOMX_ARGON_MEMORY * 1024)
 
 	return {
-		buffer: cache_buffer
+		buffer: cache_buffer,
 		// TODO: implement thunk
 	}
 }
 
-await dataset(new Uint8Array(), { shared: true })
+const g = await dataset(new Uint8Array())
+console.log(g)

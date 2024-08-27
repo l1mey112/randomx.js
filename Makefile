@@ -41,9 +41,13 @@ LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 	-msimd128 -mbulk-memory -matomics
 
+# -Wl,--shared-memory to use shared memory
+
+all: src/dataset/dataset.wasm
+
 src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
-		-Wl,--import-memory -Wl,--shared-memory \
+		-Wl,--import-memory \
 		-o $@ $(DATASET_C_SOURCES)
 
 	wasm-strip $@

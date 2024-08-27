@@ -8,8 +8,8 @@
 // most assertions, particularly at the API boundary, will be assumed to be handled by the host
 
 uint8_t K_buffer[60]; // 0-60
-
 uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
+uint8_t program_buffer[8192]; // 8 KiB
 
 WASM_EXPORT("Kb")
 void* get_K_buffer() {
