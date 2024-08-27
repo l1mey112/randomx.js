@@ -4,6 +4,7 @@
   "author": "l-m.dev",
   "main": "./dist/cjs/index.js",
   "devDependencies": {
+    "@chialab/esbuild-plugin-worker": "^0.18.1",
     "@types/bun": "latest",
     "esbuild": "^0.23.1",
     "nanoid": "^5.0.7",

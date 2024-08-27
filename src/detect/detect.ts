@@ -8,7 +8,7 @@ export async function detect(): Promise<Feature> {
 			throw null
 		}
 	} catch {
-		throw new Error('no WASM, SIMD or BULK MEMORY')
+		throw new Error('no WASM, SIMD, ATOMICS, or BULK MEMORY')
 	}
 
 	try {

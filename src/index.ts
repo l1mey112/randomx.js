@@ -1,7 +1,7 @@
 import { IO_BUFFER_SIZE, type Feature } from "../include/configuration";
 import { detect } from "./detect/detect";
-import { env_npf_putc } from "./printf";
-import randomx_main, { type Module } from './randomx/main'
+import { env_npf_putc } from "./printf/printf";
+import randomx_main, { type Module } from './dataset/main'
 
 type FeatureFlag = 'simd' | 'fma'
 

@@ -1,48 +1,56 @@
-# bun build.ts (will execute this Makefile)
+## bun build.ts (will execute this Makefile)
+#
+#WAT_SOURCES := $(shell find . -type f -name '*.wat' -not -path './node_modules/*')
+#WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
+#
+#C_SOURCES := $(shell find . -type f -name '*.c' -not -path './node_modules/*')
+#MAIN_C_SOURCES := $(shell find . -type f -name 'main.c' -not -path './node_modules/*')
+#MAIN_C_WASM_FILES := $(patsubst %.c,%.wasm,$(MAIN_C_SOURCES))
+#MAIN_C_JS_FILES := $(patsubst %.c,%.js,$(MAIN_C_SOURCES))
+#
+#HEADER_FILES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
+#HEADER_FILES += include/configuration.h
+#
+#all: $(WAT_WASM_FILES) $(MAIN_C_JS_FILES) $(MAIN_C_WASM_FILES)
+#
+#include/configuration.h: include/configuration.ts
+#	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
+#
+#%.wasm: %.wat
+#	wat2wasm --enable-all $< -o $@
 
-WAT_SOURCES := $(shell find . -type f -name '*.wat' -not -path './node_modules/*')
-WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
+#%main.wasm: $(C_SOURCES) $(HEADER_FILES)
+#	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
+#		-O3 -msimd128 -mbulk-memory \
+#		-Wl,--no-entry -Wl,-z,stack-size=8192 \
+#		-o $@ $(C_SOURCES)
+#
+#	wasm-strip $@
+#	wasm-opt -all -O4 -Oz $@ -o $@
+#
+#%main.js: %main.wasm
+#	printf "$(subst $(newline),\n,${js_template})" > $@
 
-C_SOURCES := $(shell find . -type f -name '*.c' -not -path './node_modules/*')
-MAIN_C_SOURCES := $(shell find . -type f -name 'main.c' -not -path './node_modules/*')
-MAIN_C_WASM_FILES := $(patsubst %.c,%.wasm,$(MAIN_C_SOURCES))
-MAIN_C_JS_FILES := $(patsubst %.c,%.js,$(MAIN_C_SOURCES))
+H_SOURCES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
 
-HEADER_FILES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
-HEADER_FILES += include/configuration.h
+PRINTF_C_SOURCES := $(shell find src/printf -type f -name '*.c')
+BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SOURCES)
+DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES))
 
-define newline
+LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
+CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \
+	-msimd128 -mbulk-memory -matomics
 
-
-endef
-
-define js_template
-import wasm from './main.wasm'
-
-export default async function main(imports) {
-	imports = { "e": imports }
-
-	const mod = await WebAssembly.instantiate(wasm, imports)
-	return mod.instance.exports
-}
-endef
-
-all: $(WAT_WASM_FILES) $(MAIN_C_JS_FILES) $(MAIN_C_WASM_FILES)
-
-include/configuration.h: include/configuration.ts
-	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
-
-%.wasm: %.wat
-	wat2wasm --enable-all $< -o $@
-
-%main.wasm: $(C_SOURCES) $(HEADER_FILES)
-	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
-		-O3 -msimd128 -mbulk-memory \
-		-Wl,--no-entry -Wl,-z,stack-size=8192 \
-		-o $@ $(C_SOURCES)
+src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
+	clang -O3 $(CFLAGS) $(LDFLAGS) \
+		-Wl,--import-memory -Wl,--shared-memory \
+		-o $@ $(DATASET_C_SOURCES)
 
 	wasm-strip $@
 	wasm-opt -all -O4 -Oz $@ -o $@
 
-%main.js: %main.wasm
-	printf "$(subst $(newline),\n,${js_template})" > $@
+# extract the memory
+#  - memory[0] pages: initial=4097 <- env.memory
+#                             ^^^^
+	wasm-objdump -x $@ | sed -n 's/.*initial=\([0-9]\+\).*/export default \1/p' \
+		> src/dataset/dataset.wasm.pages.ts
