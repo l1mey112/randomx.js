@@ -72,7 +72,7 @@ void init_new_key(uint32_t key_length) {
 		// generate a new program
 		ssh_generate(S, &programs[i]);
 
-		const char *inst_tostring[] = {
+		/* const char *inst_tostring[] = {
 			[ISUB_R] = "ISUB_R",
 			[IXOR_R] = "IXOR_R",
 			[IADD_RS] = "IADD_RS",
@@ -87,11 +87,49 @@ void init_new_key(uint32_t key_length) {
 			[IMULH_R] = "IMULH_R",
 			[ISMULH_R] = "ISMULH_R",
 			[IMUL_RCP] = "IMUL_RCP",
-		};
+		}; */
 
 		printf("program %d, %f\n", i, programs[i].ipc);
 		for (uint32_t j = 0; j < programs[i].size; j++) {
-			printf("\t%s\t%d\t%d\t%d\n", inst_tostring[programs[i].instructions[j].kind], programs[i].instructions[j].dst, programs[i].instructions[j].src, programs[i].instructions[j].imm32);
+			// printf("\t%s\t%d\t%d\t%d\n", inst_tostring[programs[i].instructions[j].kind], programs[i].instructions[j].dst, programs[i].instructions[j].src, programs[i].instructions[j].imm32);
+			ss_inst_desc_t *inst = &programs[i].instructions[j];
+			
+			switch (inst->kind) {
+			case ISUB_R:
+				printf("\tr%d = r%d - r%d\n", inst->dst, inst->dst, inst->src);
+				break;
+			case IXOR_R:
+			case IXOR_C7:
+			case IXOR_C8:
+			case IXOR_C9:
+				printf("\tr%d = r%d ^ r%d\n", inst->dst, inst->dst, inst->src);
+				break;
+			case IADD_RS:
+				printf("\tr%d = r%d + (r%d << mod.shift)\n", inst->dst, inst->dst, inst->src);
+				break;
+			case IMUL_R:
+				printf("\tr%d = r%d * r%d\n", inst->dst, inst->dst, inst->src);
+				break;
+			case IROR_C:
+				printf("\tr%d = r%d >>> %u\n", inst->dst, inst->dst, inst->imm32);
+				break;
+			case IADD_C7:
+			case IADD_C8:
+			case IADD_C9:
+				printf("\tr%d = r%d + %u\n", inst->dst, inst->dst, inst->imm32);
+				break;
+			case IMULH_R:
+				printf("\tr%d = (r%d * r%d) >> 64\n", inst->dst, inst->dst, inst->src);
+				break;
+			case ISMULH_R:
+				printf("\tr%d = (r%d * r%d) >> 64 (signed)\n", inst->dst, inst->dst, inst->src);
+				break;
+			case IMUL_RCP:
+				printf("\tr%d = 2^x / %u * r%d\n", inst->dst, inst->imm32, inst->dst);
+				break;
+			default:
+				unreachable();
+			}
 		}
 	}
 }

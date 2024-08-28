@@ -125,7 +125,7 @@ static bool is_mul(ss_inst_t kind) {
 }
 
 ss_inst_desc_t create(blake2b_generator_state *S, ss_inst_t kind) {
-	ss_inst_desc_t desc = INST_DESC_INIT;
+	ss_inst_desc_t desc = { -1, -1, 0, 0, INST_INVALID, INST_INVALID, 0, false, false };
 	desc.kind = kind;
 
 	switch (kind) {
@@ -257,7 +257,7 @@ bool inst_select_source(blake2b_generator_state *S, ss_inst_desc_t *inst, int cy
 	}
 
 	// if there are only 2 available registers for IADD_RS and one of them is r5, select it as the source because it cannot be the destination
-	if (available_count == 2 && inst->op_group == IADD_RS) {
+	if (available_count == 2 && inst->kind == IADD_RS) {
 		if (available_registers[0] == RegisterNeedsDisplacement || available_registers[1] == RegisterNeedsDisplacement) {
 			inst->op_group_par = inst->src = RegisterNeedsDisplacement;
 			return true;
@@ -291,7 +291,7 @@ bool inst_select_destination(blake2b_generator_state *S, ss_inst_desc_t *inst, i
 		bool different_src = i != inst->src;
 		bool not_chained_mul = allow_chained_mul || inst->op_group != IMUL_R || registers[i].last_op_group != IMUL_R;
 		bool different_last_op = registers[i].last_op_group != inst->op_group || registers[i].last_op_par != inst->op_group_par;
-		bool not_r5 = inst->op_group != IADD_RS || i != RegisterNeedsDisplacement;
+		bool not_r5 = inst->kind != IADD_RS || i != RegisterNeedsDisplacement;
 
 		if (ready && different_src && not_chained_mul && different_last_op && not_r5) {
 			available_registers[available_count++] = i;
@@ -360,34 +360,40 @@ int schedule_mop(bool commit, ss_mop_t mop, bool is_dependent, ss_uop_t port_bus
 }
 
 void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
-	decode_group_t group;
-	ss_inst_desc_t inst = {
-		.op_group = INST_INVALID,
-	};
 
 	ss_uop_t port_busy[CYCLE_MAP_SIZE][3] = {};
 	ss_reginfo_t registers[8];
 
-	bool ports_saturated = false;
-	int program_size = 0;
-	int mul_count = 0;
+	for (int i = 0; i < 8; i++) {
+		registers[i] = (ss_reginfo_t){ 0, INST_INVALID, -1, 0 };
+	}
 
+	decode_group_t group;
+	ss_inst_desc_t inst = {
+		.kind  = INST_INVALID,
+		.op_group = INST_INVALID,
+	};
+
+	bool ports_saturated = false;
+
+	int cycle = 0;
+	int dep_cycle = 0;
 	int retire_cycle = 0;
 	int decode_cycle = 0;
-	int dep_cycle = 0;
-	int cycle = 0;
+
+	int throw_away_count = 0;
 
 	int code_size = 0;
+	int program_size = 0;
 
 	int macro_op_index = 0;
 	int macro_op_count = 0;
-
-	int throw_away_count = 0;
+	int mul_count = 0;
 
 	for (; decode_cycle < RANDOMX_SUPERSCALAR_LATENCY && !ports_saturated && program_size < SUPERSCALAR_MAX_SIZE; decode_cycle++) {
 		int buffer_idx = 0;
 
-		group = fetch_next(S, inst.op_group, decode_cycle, mul_count);
+		group = fetch_next(S, inst.kind, decode_cycle, mul_count);
 
 		printf("; ------------- fetch cycle %d (%s)\n", cycle, decode_buffer[group].name);
 
@@ -396,21 +402,23 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 			int top_cycle = cycle;
 			bool is_last = decode_buffer[group].size == buffer_idx + 1;
 
-			if (inst.op_group == INST_INVALID || macro_op_index >= inst_info[inst.op_group].mops_len) {
+			// if we have issued all macro-ops for the current RandomX instruction, create a new instruction
+			if (inst.op_group == INST_INVALID || macro_op_index >= inst_info[inst.kind].mops_len) {
 				if (ports_saturated || program_size >= SUPERSCALAR_MAX_SIZE) {
 					break;
 				}
 
 				inst = create_for_slot(S, decode_buffer[group].slots[buffer_idx], group, is_last, buffer_idx == 0);
 				macro_op_index = 0;
-				printf("; %s\n", inst_info[inst.op_group].name);
+				printf("; %s\n", inst_info[inst.kind].name);
 			}
 
-			ss_mop_t mop = inst_info[inst.op_group].mops[macro_op_index];
-			int schedule_cycle = schedule_mop(false, mop, is_last && inst_info[inst.op_group].final_mop_dependent, port_busy, cycle, dep_cycle);
+			ss_mop_t mop = inst_info[inst.kind].mops[macro_op_index];
+			bool mop_dependent = is_last && inst_info[inst.kind].final_mop_dependent;
 			printf("%s ", mop_info[mop].name);
 
 			// calculate the earliest cycle when this macro-op (all of its uOPs) can be scheduled for execution
+			int schedule_cycle = schedule_mop(false, mop, mop_dependent, port_busy, cycle, dep_cycle);
 			if (schedule_cycle < 0) {
 				printf("; Unable to map operation '%s' to execution port (cycle %d)\n", mop_info[mop].name, cycle);
 				ports_saturated = true;
@@ -418,10 +426,10 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 			}
 
 			// find a source register (if applicable) that will be ready when this instruction executes
-			if (macro_op_index == inst_info[inst.op_group].src_op) {
+			if (macro_op_index == inst_info[inst.kind].src_op) {
 				int forward;
 				// if no suitable operand is ready, look up to LOOK_FORWARD_CYCLES forward
-				for (forward = 0; forward < LOOK_FORWARD_CYCLES && !inst_select_source(S, &inst, schedule_cycle, registers); ++forward) {
+				for (forward = 0; forward < LOOK_FORWARD_CYCLES && !inst_select_source(S, &inst, schedule_cycle, registers); forward++) {
 					printf("; src STALL at cycle %d\n", cycle);
 					schedule_cycle++;
 					cycle++;
@@ -430,18 +438,18 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 				if (forward == LOOK_FORWARD_CYCLES) {
 					if (throw_away_count < MAX_THROWAWAY_COUNT) {
 						throw_away_count++;
-						macro_op_index = inst_info[inst.op_group].mops_len;
-						printf("; THROW away %s\n", inst_info[inst.op_group].name);
+						macro_op_index = inst_info[inst.kind].mops_len;
+						printf("; THROW away %s\n", inst_info[inst.kind].name);
 						continue;
 					}
-					printf("; Aborting at cycle %d with decode buffer %s - source registers not available for operation %s\n", cycle, decode_buffer[group].name, inst_info[inst.op_group].name);
-					inst.op_group = INST_INVALID;
+					printf("; Aborting at cycle %d with decode buffer %s - source registers not available for operation %s\n", cycle, decode_buffer[group].name, inst_info[inst.kind].name);
+					inst.kind = inst.op_group = INST_INVALID;
 					break;
 				}
 				printf("; src = r%d\n", inst.src);
 			}
 			// find a destination register that will be ready when this instruction executes
-			if (macro_op_index == inst_info[inst.op_group].dst_op) {
+			if (macro_op_index == inst_info[inst.kind].dst_op) {
 				int forward;
 				for (forward = 0; forward < LOOK_FORWARD_CYCLES && !inst_select_destination(S, &inst, schedule_cycle, throw_away_count > 0, registers); forward++) {
 					printf("; dst STALL at cycle %d\n", cycle);
@@ -452,12 +460,12 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 				if (forward == LOOK_FORWARD_CYCLES) {
 					if (throw_away_count < MAX_THROWAWAY_COUNT) {
 						throw_away_count++;
-						macro_op_index = inst_info[inst.op_group].mops_len;
-						printf("; THROW away %s\n", inst_info[inst.op_group].name);
+						macro_op_index = inst_info[inst.kind].mops_len;
+						printf("; THROW away %s\n", inst_info[inst.kind].name);
 						continue;
 					}
 					printf("; Aborting at cycle %d with decode buffer %s - destination registers not available\n", cycle, decode_buffer[group].name);
-					inst.op_group = INST_INVALID;
+					inst.kind = inst.op_group = INST_INVALID;
 					break;
 				}
 				printf("; dst = r%d\n", inst.dst);
@@ -466,7 +474,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 			throw_away_count = 0;
 
 			// recalculate when the instruction can be scheduled for execution based on operand availability
-			schedule_cycle = schedule_mop(true, mop, is_last && inst_info[inst.op_group].final_mop_dependent, port_busy, schedule_cycle, schedule_cycle);
+			schedule_cycle = schedule_mop(true, mop, mop_dependent, port_busy, schedule_cycle, schedule_cycle);
 
 			if (schedule_cycle < 0) {
 				printf("; Unable to map operation '%s' to execution port (cycle %d)\n", mop_info[mop].name, cycle);
@@ -481,7 +489,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 			//   RegisterInfo.latency - which cycle the register will be ready
 			//   RegisterInfo.lastOpGroup - the last operation that was applied to the register
 			//   RegisterInfo.lastOpPar - the last operation source value (-1 = constant, 0-7 = register)
-			if (macro_op_index == inst_info[inst.op_group].result_op) {
+			if (macro_op_index == inst_info[inst.kind].result_op) {
 				ss_reginfo_t *reg = &registers[inst.dst];
 				retire_cycle = dep_cycle;
 				reg->latency = retire_cycle;
@@ -502,9 +510,9 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 			cycle = top_cycle;
 
 			// when all macro-ops of the current instruction have been issued, add the instruction into the program
-			if (macro_op_index >= inst_info[inst.op_group].mops_len) {
+			if (macro_op_index >= inst_info[inst.kind].mops_len) {
 				prog->instructions[program_size++] = inst;
-				mul_count += is_mul(inst.op_group);
+				mul_count += is_mul(inst.kind);
 			}
 		}
 		cycle++;

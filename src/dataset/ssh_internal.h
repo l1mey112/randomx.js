@@ -84,10 +84,3 @@ struct ss_reginfo_t {
 	int last_op_par;
 	int value;
 };
-
-#define REGINFO_INIT \
-	{ 0, INST_INVALID, -1, 0 }
-
-
-#define INST_DESC_INIT \
-	{ -1, -1, 0, 0, INST_INVALID, INST_INVALID, 0, false, false }

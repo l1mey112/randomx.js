@@ -62,4 +62,4 @@ export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }
 }
 
 const g = await dataset(new Uint8Array())
-console.log(g)
+//console.log(g)
