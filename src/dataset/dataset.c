@@ -1,3 +1,4 @@
+#include "../blake2b/blake2b.h"
 #include "argon2fill.h"
 #include "configuration.h"
 #include "wasm.h"
@@ -56,4 +57,14 @@ void init_new_key(uint32_t key_length) {
 	randomx_argon2_fill_memory_blocks(&instance);
 
 	printf("[K] %d 1KiB memory_blocks filled\n", memory_blocks);
+
+	// 5. generate superscalarhash programs
+
+	// sshash_program_t program[RANDOMX_CACHE_ACCESSES];
+	blake2b_generator_state S;
+	blake2b_generator_init(&S, K_buffer, key_length);
+	
+	for (int i = 0; i < RANDOMX_CACHE_ACCESSES; i++) {
+		// generate a new program
+	}
 }

@@ -32,6 +32,7 @@
 #	printf "$(subst $(newline),\n,${js_template})" > $@
 
 H_SOURCES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
+H_SOURCES += include/configuration.h
 
 PRINTF_C_SOURCES := $(shell find src/printf -type f -name '*.c')
 BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SOURCES)
@@ -42,6 +43,9 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 	-msimd128 -mbulk-memory -matomics
 
 # -Wl,--shared-memory to use shared memory
+
+include/configuration.h: include/configuration.ts
+	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
 
 all: src/dataset/dataset.wasm
 

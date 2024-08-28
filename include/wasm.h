@@ -14,6 +14,7 @@
 
 #define alignas _Alignas
 #define assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#define unreachable() __builtin_unreachable()
 
 #ifndef WASM_NO_OPT
 #define WASM_UNROLL _Pragma("clang loop unroll(full)")

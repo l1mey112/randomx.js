@@ -18,6 +18,8 @@ export const RANDOMX_SCRATCHPAD_L3 = 2097152        // Scratchpad L3 size in byt
 export const RANDOMX_SCRATCHPAD_L2 = 262144         // Scratchpad L2 size in bytes
 export const RANDOMX_SCRATCHPAD_L1 = 16384          // Scratchpad L1 size in bytes
 
+export const SUPERSCALAR_MAX_SIZE = (3 * RANDOMX_SUPERSCALAR_LATENCY + 2)
+
 export type Feature =
 	| 0 // JS + WASM + SIMD + BULK MEMORY
 	| 1 // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
