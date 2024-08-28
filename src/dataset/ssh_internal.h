@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "ssh.h"
+
 // kinds
 typedef enum ss_inst_t ss_inst_t;
 typedef enum ss_uop_t ss_uop_t;
@@ -40,27 +42,6 @@ enum ss_mop_t {
 	MOP_MOV_RI,
 };
 
-//                  Intel Ivy Bridge reference
-enum ss_inst_t {   // uOPs (decode)   execution ports         latency       code size
-	ISUB_R = 0,    // 1               p015                    1               3 (sub)
-	IXOR_R = 1,    // 1               p015                    1               3 (xor)
-	IADD_RS = 2,   // 1               p01                     1               4 (lea)
-	IMUL_R = 3,    // 1               p1                      3               4 (imul)
-	IROR_C = 4,    // 1               p05                     1               4 (ror)
-	IADD_C7 = 5,   // 1               p015                    1               7 (add)
-	IXOR_C7 = 6,   // 1               p015                    1               7 (xor)
-	IADD_C8 = 7,   // 1+0             p015                    1               7+1 (add+nop)
-	IXOR_C8 = 8,   // 1+0             p015                    1               7+1 (xor+nop)
-	IADD_C9 = 9,   // 1+0             p015                    1               7+2 (add+nop)
-	IXOR_C9 = 10,  // 1+0             p015                    1               7+2 (xor+nop)
-	IMULH_R = 11,  // 1+2+1           0+(p1,p5)+0             3               3+3+3 (mov+mul+mov)
-	ISMULH_R = 12, // 1+2+1           0+(p1,p5)+0             3               3+3+3 (mov+imul+mov)
-	IMUL_RCP = 13, // 1+1             p015+p1                 4              10+4   (mov+imul)
-
-	INST_COUNT = 14,
-	INST_INVALID = -1
-};
-
 struct ss_mop_info_t {
 	const char *name;
 	uint8_t latency;
@@ -90,6 +71,23 @@ enum decode_group_t {
 };
 
 struct decode_buffer_t {
+	const char *name;
 	int size;
 	int *slots;
 };
+
+typedef struct ss_reginfo_t ss_reginfo_t;
+
+struct ss_reginfo_t {
+	int latency;
+	ss_inst_t last_op_group;
+	int last_op_par;
+	int value;
+};
+
+#define REGINFO_INIT \
+	{ 0, INST_INVALID, -1, 0 }
+
+
+#define INST_DESC_INIT \
+	{ -1, -1, 0, 0, INST_INVALID, INST_INVALID, 0, false, false }

@@ -47,13 +47,13 @@ export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }
 	const exports = module.instance.exports as DatasetModule
 
 	const key_begin = exports.Kb()
-	const key_buffer = new Uint8Array(exports.memory.buffer, key_begin, 60)
+	const key_buffer = new Uint8Array(memory.buffer, key_begin, 60)
 
 	key_buffer.set(K)
 	exports.K(K.length) // long blocking
 
 	const cache_begin = exports.Cb()
-	const cache_buffer = new Uint8Array(exports.memory.buffer, cache_begin, RANDOMX_ARGON_MEMORY * 1024)
+	const cache_buffer = new Uint8Array(memory.buffer, cache_begin, RANDOMX_ARGON_MEMORY * 1024)
 
 	return {
 		buffer: cache_buffer,

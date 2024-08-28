@@ -44,10 +44,10 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 
 # -Wl,--shared-memory to use shared memory
 
+all: src/dataset/dataset.wasm
+
 include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
-
-all: src/dataset/dataset.wasm
 
 src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \

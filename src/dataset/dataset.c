@@ -3,13 +3,17 @@
 #include "configuration.h"
 #include "wasm.h"
 
+#include "ssh.h"
+
 #include <stdint.h>
 
 // most assertions, particularly at the API boundary, will be assumed to be handled by the host
 
 uint8_t K_buffer[60]; // 0-60
 uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
-uint8_t program_buffer[8192]; // 8 KiB
+ss_program_t programs[RANDOMX_CACHE_ACCESSES];
+
+//uint8_t program_buffer[8192]; // 8 KiB
 
 WASM_EXPORT("Kb")
 void* get_K_buffer() {
@@ -61,10 +65,33 @@ void init_new_key(uint32_t key_length) {
 	// 5. generate superscalarhash programs
 
 	// sshash_program_t program[RANDOMX_CACHE_ACCESSES];
-	blake2b_generator_state S;
-	blake2b_generator_init(&S, K_buffer, key_length);
+	blake2b_generator_state S[1];
+	blake2b_generator_init(S, K_buffer, key_length);
 	
 	for (int i = 0; i < RANDOMX_CACHE_ACCESSES; i++) {
 		// generate a new program
+		ssh_generate(S, &programs[i]);
+
+		const char *inst_tostring[] = {
+			[ISUB_R] = "ISUB_R",
+			[IXOR_R] = "IXOR_R",
+			[IADD_RS] = "IADD_RS",
+			[IMUL_R] = "IMUL_R",
+			[IROR_C] = "IROR_C",
+			[IADD_C7] = "IADD_C7",
+			[IXOR_C7] = "IXOR_C7",
+			[IADD_C8] = "IADD_C8",
+			[IXOR_C8] = "IXOR_C8",
+			[IADD_C9] = "IADD_C9",
+			[IXOR_C9] = "IXOR_C9",
+			[IMULH_R] = "IMULH_R",
+			[ISMULH_R] = "ISMULH_R",
+			[IMUL_RCP] = "IMUL_RCP",
+		};
+
+		printf("program %d, %f\n", i, programs[i].ipc);
+		for (uint32_t j = 0; j < programs[i].size; j++) {
+			printf("\t%s\t%d\t%d\t%d\n", inst_tostring[programs[i].instructions[j].kind], programs[i].instructions[j].dst, programs[i].instructions[j].src, programs[i].instructions[j].imm32);
+		}
 	}
 }
