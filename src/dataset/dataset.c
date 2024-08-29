@@ -4,6 +4,7 @@
 #include "wasm.h"
 
 #include "ssh.h"
+#include "../jit/jit.h"
 
 #include <stdint.h>
 
@@ -12,8 +13,7 @@
 uint8_t K_buffer[60];                                    // 0-60
 uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
 ss_program_t programs[RANDOMX_CACHE_ACCESSES];
-
-// uint8_t program_buffer[8192]; // 8 KiB
+uint8_t jit_buffer[16 * 1024]; // 16 KiB, just hope it doesn't overflow
 
 WASM_EXPORT("Kb")
 void *get_K_buffer() {
@@ -25,8 +25,13 @@ void *get_cache() {
 	return cache;
 }
 
+WASM_EXPORT("Jb")
+void *get_jit() {
+	return jit_buffer;
+}
+
 WASM_EXPORT("K")
-void init_new_key(uint32_t key_length) {
+uint32_t init_new_key(uint32_t key_length) {
 	printf("[K] initialise cache with key length %u\n", key_length);
 
 	// create new cache
@@ -68,50 +73,12 @@ void init_new_key(uint32_t key_length) {
 	blake2b_generator_state S[1];
 	blake2b_generator_init(S, K_buffer, key_length);
 
+	// generate RANDOMX_CACHE_ACCESSES programs
 	for (int i = 0; i < RANDOMX_CACHE_ACCESSES; i++) {
-		// generate a new program
 		ssh_generate(S, &programs[i]);
-
-		printf("program %d, %f\n", i, programs[i].ipc);
-		for (uint32_t j = 0; j < programs[i].size; j++) {
-			ss_inst_t *inst = &programs[i].instructions[j];
-
-			switch (inst->opcode) {
-			case SS_ISUB_R:
-				printf("\tr%d = r%d - r%d\n", inst->dst, inst->dst, inst->src);
-				break;
-			case SS_IXOR_R:
-			case SS_IXOR_C7:
-			case SS_IXOR_C8:
-			case SS_IXOR_C9:
-				printf("\tr%d = r%d ^ r%d\n", inst->dst, inst->dst, inst->src);
-				break;
-			case SS_IADD_RS:
-				printf("\tr%d = r%d + (r%d << %d)\n", inst->dst, inst->dst, inst->src, (inst->mod >> 2) & 3);
-				break;
-			case SS_IMUL_R:
-				printf("\tr%d = r%d * r%d\n", inst->dst, inst->dst, inst->src);
-				break;
-			case SS_IROR_C:
-				printf("\tr%d = r%d ror %u\n", inst->dst, inst->dst, inst->imm32);
-				break;
-			case SS_IADD_C7:
-			case SS_IADD_C8:
-			case SS_IADD_C9:
-				printf("\tr%d = r%d + %u\n", inst->dst, inst->dst, inst->imm32);
-				break;
-			case SS_IMULH_R:
-				printf("\tr%d = (r%d * r%d) >> 64\n", inst->dst, inst->dst, inst->src);
-				break;
-			case SS_ISMULH_R:
-				printf("\tr%d = (r%d * r%d) >> 64 (signed)\n", inst->dst, inst->dst, inst->src);
-				break;
-			case SS_IMUL_RCP:
-				printf("\tr%d = x * r%d; rcp = 2^x / %u (rcp < 2^64)\n", inst->dst, inst->dst, inst->imm32);
-				break;
-			default:
-				unreachable();
-			}
-		}
 	}
+
+	uint32_t wasm_size = ssh_jit(programs, jit_buffer);
+
+	return wasm_size;
 }

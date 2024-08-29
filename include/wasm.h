@@ -8,6 +8,7 @@
 
 #define memcpy __builtin_memcpy        // bulk-memory
 #define memset __builtin_memset        // bulk-memory
+#define memmove __builtin_memmove      // bulk-memory
 #define rotr64 __builtin_rotateright64 // i64.rotr
 
 #define NULL ((void *)0)

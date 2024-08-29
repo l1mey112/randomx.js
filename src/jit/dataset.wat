@@ -24,7 +24,7 @@
 
 	;; CacheSize = RANDOMX_ARGON_MEMORY * ArgonBlockSize
 	;; CacheLineSize = RANDOMX_DATASET_ITEM_SIZE
-	(func $get_mix_block (param $register_value i64) (param $memory_ptr i32) (result i32)
+	(;(func $get_mix_block (param $register_value i64) (param $memory_ptr i32) (result i32)
 		(local $mask i32)
 		(local $block_offset i32)
 
@@ -35,7 +35,7 @@
 		i32.mul
 		i32.const 0
 		i32.add
-	)
+	);)
 
 	(func (export "D") (param $cache_ptr i32) (param $item_number i64) (result i64 i64 i64 i64 i64 i64 i64 i64)
 		(local $r0 i64) (local $r1 i64) (local $r2 i64) (local $r3 i64) (local $r4 i64) (local $r5 i64) (local $r6 i64) (local $r7 i64)
@@ -59,8 +59,6 @@
 
 		;; execute superscalar hash functions up till RANDOMX_CACHE_ACCESSES
 
-
-		
 		i64.const 0
 		i64.const 0
 		i64.const 0

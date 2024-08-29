@@ -1,6 +1,9 @@
 CompileFlags:
-  Add: [-xc, -Wall, -Wextra, -Wno-uninitialized, -Wshadow, -Xclang, -I./include]
-  Compiler: clang
+	Add: [-xc, -Wall, -Wextra, -Wno-uninitialized, -Wshadow, -Xclang, -I./include]
+	Compiler: clang
 
 Diagnostics:
-  Suppress: "-Wunknown-attributes"
+	Suppress: "-Wunknown-attributes"
+
+InlayHints:
+	Designators: No

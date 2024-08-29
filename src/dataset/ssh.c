@@ -359,6 +359,8 @@ int schedule_mop(bool commit, ss_mop_t mop, bool is_dependent, ss_uop_t port_bus
 	return -1;
 }
 
+#define printf(...)
+
 void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 
 	ss_uop_t port_busy[CYCLE_MAP_SIZE][3] = {};
@@ -558,3 +560,5 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 	prog->ipc = ipc;
 	prog->mul_count = mul_count;
 }
+
+#undef printf

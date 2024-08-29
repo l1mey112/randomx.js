@@ -8,12 +8,13 @@ type DatasetModule = {
 
 	Kb(): number // key buffer
 	Cb(): number // cache
-	K(key_length: number): void
+	Jb(): number // jit
+	K(key_length: number): number
 }
 
 export type Dataset = {
 	buffer: Uint8Array // backing ArrayBuffer or SharedArrayBuffer
-	thunk?: Uint8Array
+	thunk: Uint8Array
 }
 
 export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }): Promise<Dataset> {
@@ -50,16 +51,22 @@ export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }
 	const key_buffer = new Uint8Array(memory.buffer, key_begin, 60)
 
 	key_buffer.set(K)
-	exports.K(K.length) // long blocking
+	const jit_size = exports.K(K.length) // long blocking
 
 	const cache_begin = exports.Cb()
 	const cache_buffer = new Uint8Array(memory.buffer, cache_begin, RANDOMX_ARGON_MEMORY * 1024)
 
+	const jit_begin = exports.Jb()
+	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
+
 	return {
 		buffer: cache_buffer,
-		// TODO: implement thunk
+		thunk: jit_buffer,
 	}
 }
 
 const g = await dataset(new Uint8Array())
-//console.log(g)
+console.log(g.thunk)
+
+const k = await WebAssembly.instantiate(g.thunk)
+console.log(k.instance.exports)
