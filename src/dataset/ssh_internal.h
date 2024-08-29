@@ -6,7 +6,7 @@
 #include "ssh.h"
 
 // kinds
-typedef enum ss_inst_t ss_inst_t;
+typedef enum ss_inst_kind_t ss_inst_kind_t;
 typedef enum ss_uop_t ss_uop_t;
 typedef enum ss_mop_t ss_mop_t;
 
@@ -80,7 +80,21 @@ typedef struct ss_reginfo_t ss_reginfo_t;
 
 struct ss_reginfo_t {
 	int latency;
-	ss_inst_t last_op_group;
+	ss_inst_kind_t last_op_group;
 	int last_op_par;
 	int value;
+};
+
+typedef struct ss_inst_desc_t ss_inst_desc_t;
+
+struct ss_inst_desc_t {
+	int src;
+	int dst;
+	int mod;
+	uint32_t imm32;
+	ss_inst_kind_t kind;
+	ss_inst_kind_t op_group;
+	int op_group_par;
+	bool can_reuse;
+	bool group_par_is_source;
 };
