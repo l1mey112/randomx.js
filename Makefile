@@ -39,17 +39,25 @@ BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SO
 JIT_C_SOURCES := $(shell find src/jit -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES)
 
 DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES))
+TESTS_C_SOURCES := $(sort $(shell find src/tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES))
 
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \
-	-msimd128 -mbulk-memory -matomics
+	-msimd128 -mbulk-memory
 
-# -Wl,--shared-memory to use shared memory
+# -matomics -Wl,--shared-memory to use shared memory
 
-all: src/dataset/dataset.wasm
+all: src/dataset/dataset.wasm src/tests/harness.wasm
 
 include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
+
+src/tests/harness.wasm: $(TESTS_C_SOURCES) $(H_SOURCES)
+	clang -O3 $(CFLAGS) $(LDFLAGS) \
+		-o $@ $(TESTS_C_SOURCES)
+
+	wasm-strip $@
+	wasm-opt -all -O4 -Oz $@ -o $@
 
 src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \

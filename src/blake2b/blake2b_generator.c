@@ -3,7 +3,7 @@
 
 #define MAX_SEED_SIZE 60
 
-static void check_data(blake2b_generator_state *S, uint32_t bytes_needed) {
+static inline void check_data(blake2b_generator_state *S, uint32_t bytes_needed) {
 	if (S->index + bytes_needed > sizeof(S->data)) {
 		blake2b(S->data, sizeof(S->data), S->data, S->index);
 		S->index = 0;
@@ -11,6 +11,7 @@ static void check_data(blake2b_generator_state *S, uint32_t bytes_needed) {
 }
 
 void blake2b_generator_init(blake2b_generator_state *S, const uint8_t *seed, int seed_len) {
+	S->index = sizeof(S->data);
 	memset(S->data, 0, sizeof(S->data));
 	memcpy(S->data, seed, seed_len > MAX_SEED_SIZE ? MAX_SEED_SIZE : seed_len);
 }
