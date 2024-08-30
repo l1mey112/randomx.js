@@ -50,3 +50,8 @@ WASM_EXPORT("init_new_cache")
 void export_init_new_cache(uint32_t key_length) {
 	init_new_cache(H_buffer, key_length, H_buffer);
 }
+
+WASM_EXPORT("blake2b_1024")
+void export_blake2b_1024(uint32_t data_length) {
+	blake2b_1024(H_buffer, H_buffer, data_length);
+}

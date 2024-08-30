@@ -13,6 +13,9 @@ type Module = {
 	blake2b_update: (size: number) => void
 	blake2b_finalise: () => void
 
+	// long1024
+	blake2b_1024: (size: number) => void
+
 	// BlakeGenerator
 	blake2b_generator_init(key_length: number): void
 	blake2b_generator_u8(): number
@@ -65,4 +68,10 @@ export const argon2fill = (key: Uint8Array) => {
 	buffer.set(key)
 	module.init_new_cache(key.length)
 	return new BigUint64Array(module.memory.buffer, buffer_ptr, SCRATCH_SIZE / 8)
+}
+
+export const long1024 = (data: Uint8Array) => {
+	buffer.set(data)
+	module.blake2b_1024(data.length)
+	return buffer.slice(0, 1024)
 }
