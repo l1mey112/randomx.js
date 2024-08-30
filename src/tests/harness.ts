@@ -1,7 +1,8 @@
+import { RANDOMX_ARGON_MEMORY } from '../../include/configuration'
 import { env_npf_putc } from '../printf/printf'
 import wasm from './harness.wasm'
 
-const SCRATCH_SIZE = 1024
+const SCRATCH_SIZE = 1024 * RANDOMX_ARGON_MEMORY
 
 type Module = {
 	memory: WebAssembly.Memory
@@ -16,11 +17,16 @@ type Module = {
 	blake2b_generator_init(key_length: number): void
 	blake2b_generator_u8(): number
 	blake2b_generator_i32(): number
+
+	// argon2fill
+	init_new_cache: (key_length: number) => void
 }
 
 const m = await WebAssembly.instantiate(wasm, { e: { ch: env_npf_putc } })
 export const module = m.instance.exports as Module
-export const buffer = new Uint8Array(module.memory.buffer, module.buffer(), SCRATCH_SIZE)
+
+const buffer_ptr = module.buffer()
+export const buffer = new Uint8Array(module.memory.buffer, buffer_ptr, SCRATCH_SIZE)
 
 const blake2b = (hash_length: number) => (data: Uint8Array, key?: Uint8Array) => {
 	key ??= new Uint8Array(0)
@@ -53,4 +59,10 @@ export const blake2b_generator = (key?: Uint8Array) => {
 		u8: () => module.blake2b_generator_u8(),
 		i32: () => module.blake2b_generator_i32(),
 	}
+}
+
+export const argon2fill = (key: Uint8Array) => {
+	buffer.set(key)
+	module.init_new_cache(key.length)
+	return new BigUint64Array(module.memory.buffer, buffer_ptr, SCRATCH_SIZE / 8)
 }

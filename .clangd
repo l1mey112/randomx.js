@@ -1,9 +1,11 @@
 CompileFlags:
-	Add: [-xc, -Wall, -Wextra, -Wno-uninitialized, -Wshadow, -Xclang, -I./include]
-	Compiler: clang
+  # add [-msimd128, --target=wasm32] for wasm __builtins
+  Add: [-xc, -Wall, -Wextra, -Wno-uninitialized, -Wshadow, -Xclang, -I./include, -msimd128, --target=wasm32]
+  Compiler: clang
 
 Diagnostics:
-	Suppress: "-Wunknown-attributes"
+  Suppress: "-Wunknown-attributes"
 
 InlayHints:
-	Designators: No
+  Designators: No
+  ParameterNames: No

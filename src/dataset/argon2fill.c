@@ -16,14 +16,14 @@ void rxa2_initial_hash(uint8_t *key, uint32_t key_length, uint8_t blockhash[ARGO
 	word = v;   \
 	blake2b_update(S, (uint8_t *)&word, sizeof(word))
 
-	WORD(RANDOMX_ARGON_LANES);   // lanes
-	WORD(0);                     // outlen
-	WORD(0);                     // m_cost
-	WORD(0);                     // t_cost
-	WORD(ARGON2_VERSION_NUMBER); // version
-	WORD(0);                     // type (Argon2_d)
+	WORD(RANDOMX_ARGON_LANES);      // lanes
+	WORD(0);                        // outlen
+	WORD(RANDOMX_ARGON_MEMORY);     // m_cost
+	WORD(RANDOMX_ARGON_ITERATIONS); // t_cost
+	WORD(ARGON2_VERSION_NUMBER);    // version
+	WORD(0);                        // type (Argon2_d)
 
-	WORD(0);                                                                 // pwdlen
+	WORD(key_length);                                                        // pwdlen
 	blake2b_update(S, key, key_length);                                      // pwd
 	WORD(STRLEN_CONST(RANDOMX_ARGON_SALT));                                  // saltlen
 	blake2b_update(S, RANDOMX_ARGON_SALT, STRLEN_CONST(RANDOMX_ARGON_SALT)); // salt
@@ -80,11 +80,7 @@ void randomx_argon2_fill_memory_blocks(const argon2_instance_t *instance) {
 				argon2_position_t position = {r, l, (uint8_t)s, 0};
 
 				printf("[randomx_argon2_fill_memory_blocks]: %d %d %d\n", r, s, l);
-
 				randomx_argon2_fill_segment_core_impl(instance, position);
-#ifdef __wasm_simd128__
-#else
-#endif
 			}
 		}
 	}

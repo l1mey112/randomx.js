@@ -39,7 +39,7 @@ BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SO
 JIT_C_SOURCES := $(shell find src/jit -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES)
 
 DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES))
-TESTS_C_SOURCES := $(sort $(shell find src/tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES))
+TESTS_C_SOURCES := $(sort $(shell find src/tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES))
 
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \

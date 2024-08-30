@@ -1,9 +1,11 @@
+#include "../blake2b/blake2b.h"
+#include "../dataset/cache.h"
+#include "configuration.h"
 #include "wasm.h"
-#include "../src/blake2b/blake2b.h"
 
 #include <stdint.h>
 
-uint8_t H_buffer[1024];
+uint8_t H_buffer[RANDOMX_ARGON_MEMORY * 1024];
 
 blake2b_state BLAKE2B_S[1];
 
@@ -42,4 +44,9 @@ uint8_t export_blake2b_generator_u8(void) {
 WASM_EXPORT("blake2b_generator_i32")
 int32_t export_blake2b_generator_i32(void) {
 	return blake2b_generator_u32(BLAKE2B_GEN_S);
+}
+
+WASM_EXPORT("init_new_cache")
+void export_init_new_cache(uint32_t key_length) {
+	init_new_cache(H_buffer, key_length, H_buffer);
 }

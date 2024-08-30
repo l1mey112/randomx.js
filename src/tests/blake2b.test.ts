@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test'
 import { random } from 'nanoid'
 import { hash256, hash512 } from './harness'
 
-test('wasm.256', () => {
+test('hash256', () => {
 	for (let i = 0; i < 1024; i++) {
 		const bytes = random(i)
 		
@@ -16,7 +16,7 @@ test('wasm.256', () => {
 	}
 })
 
-test('wasm.512', () => {
+test('hash512', () => {
 	for (let i = 0; i < 1024; i++) {
 		const bytes = random(i)
 		

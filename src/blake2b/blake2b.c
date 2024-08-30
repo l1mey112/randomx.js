@@ -222,14 +222,14 @@ void blake2b_1024(uint8_t *out, const void *in, uint32_t inlen) {
 	uint8_t out_buffer[BLAKE2B_OUTBYTES];
 	uint8_t in_buffer[BLAKE2B_OUTBYTES];
 
-	uint32_t word = 1024;
-	blake2b_update(&blake_state, (uint8_t *)&word, sizeof(word));
+	uint32_t outlen_bytes = 1024;
+	blake2b_update(&blake_state, (uint8_t *)&outlen_bytes, sizeof(outlen_bytes));
 	blake2b_update(&blake_state, in, inlen);
 	blake2b_finalise(&blake_state, out_buffer);
 
 	memcpy(out, out_buffer, BLAKE2B_OUTBYTES / 2);
 	out += BLAKE2B_OUTBYTES / 2;
-	toproduce = (uint32_t)1024 - BLAKE2B_OUTBYTES / 2;
+	toproduce = 1024U - BLAKE2B_OUTBYTES / 2;
 
 	while (toproduce > BLAKE2B_OUTBYTES) {
 		memcpy(in_buffer, out_buffer, BLAKE2B_OUTBYTES);
@@ -240,6 +240,6 @@ void blake2b_1024(uint8_t *out, const void *in, uint32_t inlen) {
 	}
 
 	memcpy(in_buffer, out_buffer, BLAKE2B_OUTBYTES);
-	blake2b(out_buffer, BLAKE2B_OUTBYTES, in_buffer, toproduce);
+	blake2b(out_buffer, toproduce, in_buffer, BLAKE2B_OUTBYTES);
 	memcpy(out, out_buffer, toproduce);
 }
