@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 void rxa2_initial_hash(uint8_t *key, uint32_t key_length, uint8_t blockhash[ARGON2_PREHASH_SEED_LENGTH]) {
-	blake2b_state *S;
+	blake2b_state S[1];
 
 	uint32_t word;
 
@@ -79,7 +79,7 @@ void randomx_argon2_fill_memory_blocks(const argon2_instance_t *instance) {
 			for (l = 0; l < instance->lanes; ++l) {
 				argon2_position_t position = {r, l, (uint8_t)s, 0};
 
-				printf("[randomx_argon2_fill_memory_blocks]: %d %d %d\n", r, s, l);
+				printf("[randomx_argon2_fill_memory_blocks]: %p [%d %d %d]\n", instance->memory, r, s, l);
 				randomx_argon2_fill_segment_v128(instance, position);
 			}
 		}
