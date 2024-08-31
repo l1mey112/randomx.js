@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 void rxa2_initial_hash(uint8_t *key, uint32_t key_length, uint8_t blockhash[ARGON2_PREHASH_SEED_LENGTH]) {
-	blake2b_state *S;
+	blake2b_state S[1];
 
 	uint32_t word;
 
