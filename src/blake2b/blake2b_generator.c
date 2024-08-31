@@ -5,7 +5,7 @@
 
 static inline void check_data(blake2b_generator_state *S, uint32_t bytes_needed) {
 	if (S->index + bytes_needed > sizeof(S->data)) {
-		blake2b(S->data, sizeof(S->data), S->data, S->index);
+		blake2b(S->data, sizeof(S->data), S->data, sizeof(S->data));
 		S->index = 0;
 	}
 }

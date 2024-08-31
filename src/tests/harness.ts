@@ -2,11 +2,12 @@ import { RANDOMX_ARGON_MEMORY } from '../../include/configuration'
 import { env_npf_putc } from '../printf/printf'
 import wasm from './harness.wasm'
 
-const SCRATCH_SIZE = 1024 * RANDOMX_ARGON_MEMORY
+const SCRATCH_SIZE = 1024 * 16
 
 type Module = {
 	memory: WebAssembly.Memory
-	buffer: () => number
+	scratch_buffer: () => number
+	cache_buffer: () => number
 
 	// Hash256 and Hash512
 	blake2b_init_key: (key_length: number, hash_length: number) => void
@@ -23,12 +24,16 @@ type Module = {
 
 	// argon2fill
 	init_new_cache: (key_length: number) => void
+
+	// SuperscalarHash
+	ssh_init_newblake: (key_length: number) => void
+	ssh_generate_hash256: () => void
 }
 
 const m = await WebAssembly.instantiate(wasm, { e: { ch: env_npf_putc } })
 export const module = m.instance.exports as Module
 
-const buffer_ptr = module.buffer()
+const buffer_ptr = module.scratch_buffer()
 export const buffer = new Uint8Array(module.memory.buffer, buffer_ptr, SCRATCH_SIZE)
 
 const blake2b = (hash_length: number) => (data: Uint8Array, key?: Uint8Array) => {
@@ -67,7 +72,7 @@ export const blake2b_generator = (key?: Uint8Array) => {
 export const argon2fill = (key: Uint8Array) => {
 	buffer.set(key)
 	module.init_new_cache(key.length)
-	return new BigUint64Array(module.memory.buffer, buffer_ptr, SCRATCH_SIZE / 8)
+	return new BigUint64Array(module.memory.buffer, module.cache_buffer(), RANDOMX_ARGON_MEMORY * 1024 / 8)
 }
 
 export const long1024 = (data: Uint8Array) => {

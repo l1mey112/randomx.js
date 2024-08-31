@@ -1,6 +1,6 @@
 CompileFlags:
   # add [-msimd128, --target=wasm32] for wasm __builtins
-  Add: [-xc, -Wall, -Wextra, -Xclang, -I./include, -msimd128, --target=wasm32]
+  Add: [-xc, -Wall, -Wextra, -Wshadow, -Wimplicit-fallthrough, -Xclang, -I./include, -msimd128, --target=wasm32]
   Compiler: clang
 
 Diagnostics:

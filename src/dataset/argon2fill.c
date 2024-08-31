@@ -79,7 +79,7 @@ void randomx_argon2_fill_memory_blocks(const argon2_instance_t *instance) {
 			for (l = 0; l < instance->lanes; ++l) {
 				argon2_position_t position = {r, l, (uint8_t)s, 0};
 
-				printf("[randomx_argon2_fill_memory_blocks]: %p [%d %d %d]\n", instance->memory, r, s, l);
+				//printf("[randomx_argon2_fill_memory_blocks]: %p [%d %d %d]\n", instance->memory, r, s, l);
 				randomx_argon2_fill_segment_v128(instance, position);
 			}
 		}

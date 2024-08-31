@@ -31,6 +31,8 @@ enum ss_inst_kind_t { // uOPs (decode)   execution ports         latency       c
 	SS_INST_INVALID = -1
 };
 
+// WARNING: adjusting the layout of ss_inst_t will break tests
+
 struct ss_inst_t {
 	uint8_t opcode;
 	uint8_t dst;

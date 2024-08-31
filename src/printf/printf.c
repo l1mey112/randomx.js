@@ -14,7 +14,7 @@ __attribute__((minsize)) int printf(const char *restrict format, ...) {
 	return ret;
 }
 
-__attribute__((minsize)) int snprintf(char *restrict str, uint32_t size, const char *restrict format, ...) {
+__attribute__((minsize)) int snprintf(char *restrict str, unsigned long size, const char *restrict format, ...) {
 	va_list args;
 	va_start(args, format);
 	int ret = npf_vsnprintf(str, size, format, args);

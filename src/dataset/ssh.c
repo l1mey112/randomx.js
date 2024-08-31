@@ -27,17 +27,17 @@
 // Usually one macro-op = one x86 instruction, but 2 instructions are sometimes fused into 1 macro-op
 // Macro-op can consist of 1 or 2 uOPs.
 static const ss_mop_info_t mop_info[] = {
-	{"sub_rr", 1, 3, UOP_P015, UOP_NULL},
-	{"xor_rr", 1, 3, UOP_P015, UOP_NULL},
-	{"lea_sib", 1, 4, UOP_P01, UOP_NULL},
-	{"imul_rr", 3, 4, UOP_P1, UOP_NULL},
-	{"ror_ri", 1, 4, UOP_P05, UOP_NULL},
-	{"add_ri", 1, 7, UOP_P015, UOP_NULL},
-	{"xor_ri", 1, 7, UOP_P015, UOP_NULL},
-	{"mov_rr", 0, 3, UOP_NULL, UOP_NULL},
-	{"mul_r", 4, 3, UOP_P1, UOP_P5},
-	{"imul_r", 4, 3, UOP_P1, UOP_P5},
-	{"mov_ri", 1, 10, UOP_P015, UOP_NULL},
+	{"sub r,r", 1, 3, UOP_P015, UOP_NULL},
+	{"xor r,r", 1, 3, UOP_P015, UOP_NULL},
+	{"lea r,r+r*s", 1, 4, UOP_P01, UOP_NULL},
+	{"imul r,r", 3, 4, UOP_P1, UOP_NULL},
+	{"ror r,i", 1, 4, UOP_P05, UOP_NULL},
+	{"add r,i", 1, 7, UOP_P015, UOP_NULL},
+	{"xor r,i", 1, 7, UOP_P015, UOP_NULL},
+	{"mov r,r", 0, 3, UOP_NULL, UOP_NULL},
+	{"mul r", 4, 3, UOP_P1, UOP_P5},
+	{"imul r", 4, 3, UOP_P1, UOP_P5},
+	{"mov rax,i64", 1, 10, UOP_P015, UOP_NULL},
 };
 
 static const ss_inst_info_t inst_info[] = {
@@ -79,32 +79,40 @@ static const decode_buffer_t decode_buffer[GROUP_SIZE] = {
 #undef A
 };
 
+#define printf(...)
+
 decode_group_t fetch_next(blake2b_generator_state *S, ss_inst_kind_t kind, int cycle, int mul_count) {
 	// If the current RandomX instruction is "IMULH", the next fetch configuration must be 3-3-10
 	// because the full 128-bit multiplication instruction is 3 bytes long and decodes to 2 uOPs on Intel CPUs.
 	// Intel CPUs can decode at most 4 uOPs per cycle, so this requires a 2-1-1 configuration for a total of 3 macro ops.
 	if (kind == SS_IMULH_R || kind == SS_ISMULH_R) {
+		printf("fetch 3-3-10\n");
 		return GROUP_5_3310;
 	}
 
 	// To make sure that the multiplication port is saturated, a 4-4-4-4 configuration is generated if the number of multiplications
 	// is lower than the number of cycles.
 	if (mul_count < cycle + 1) {
+		printf("fetch 4-4-4-4\n");
 		return GROUP_4_4444;
 	}
 
 	// If the current RandomX instruction is "IMUL_RCP", the next buffer must begin with a 4-byte slot for multiplication.
 	if (kind == SS_IMUL_RCP) {
-		return (blake2b_generator_u8(S) & 1) ? GROUP_0_484 : GROUP_3_493;
+		printf("fetch IMUL_RCP\n");
+		uint8_t value = blake2b_generator_u8(S) & 1;
+		printf("fetch %u\n", value);
+		return (value) ? GROUP_0_484 : GROUP_3_493;
 	}
 
-	static const decode_group_t next_group[GROUP_SIZE] = {
+	static const decode_group_t next_group[4] = {
 		GROUP_0_484,
 		GROUP_1_7333,
 		GROUP_2_3733,
 		GROUP_3_493,
 	};
 
+	printf("fetch next group\n");
 	return next_group[blake2b_generator_u8(S) & 3];
 }
 
@@ -125,7 +133,7 @@ static bool is_mul(ss_inst_kind_t kind) {
 }
 
 ss_inst_desc_t create(blake2b_generator_state *S, ss_inst_kind_t kind) {
-	ss_inst_desc_t desc = { -1, -1, 0, 0, SS_INST_INVALID, SS_INST_INVALID, 0, false, false };
+	ss_inst_desc_t desc = {-1, -1, 0, 0, SS_INST_INVALID, SS_INST_INVALID, 0, false, false};
 	desc.kind = kind;
 
 	switch (kind) {
@@ -151,7 +159,6 @@ ss_inst_desc_t create(blake2b_generator_state *S, ss_inst_kind_t kind) {
 			desc.imm32 = blake2b_generator_u8(S) & 63;
 		} while (desc.imm32 == 0);
 		desc.op_group = SS_IROR_C;
-		desc.group_par_is_source = true;
 		desc.op_group_par = -1;
 		break;
 	case SS_IADD_C7:
@@ -172,6 +179,7 @@ ss_inst_desc_t create(blake2b_generator_state *S, ss_inst_kind_t kind) {
 		desc.op_group = SS_IMULH_R;
 		desc.op_group_par = blake2b_generator_u32(S);
 		desc.can_reuse = true;
+		break;
 	case SS_ISMULH_R:
 		desc.op_group = SS_ISMULH_R;
 		desc.op_group_par = blake2b_generator_u32(S);
@@ -191,7 +199,7 @@ ss_inst_desc_t create(blake2b_generator_state *S, ss_inst_kind_t kind) {
 	return desc;
 }
 
-ss_inst_desc_t create_for_slot(blake2b_generator_state *S, int slot_size, decode_group_t fetch_type, bool is_last, bool is_first) {
+ss_inst_desc_t create_for_slot(blake2b_generator_state *S, int slot_size, decode_group_t fetch_type, bool is_last) {
 
 	static const ss_inst_kind_t slot_3[] = {SS_ISUB_R, SS_IXOR_R};
 	static const ss_inst_kind_t slot_3L[] = {SS_ISUB_R, SS_IXOR_R, SS_IMULH_R, SS_ISMULH_R};
@@ -288,7 +296,7 @@ bool inst_select_destination(blake2b_generator_state *S, ss_inst_desc_t *inst, i
 	//  * register r5 cannot be the destination of the IADD_RS instruction (limitation of the x86 lea instruction)
 	for (int i = 0; i < 8; i++) {
 		bool ready = registers[i].latency <= cycle;
-		bool different_src = i != inst->src;
+		bool different_src = inst->can_reuse || i != inst->src;
 		bool not_chained_mul = allow_chained_mul || inst->op_group != SS_IMUL_R || registers[i].last_op_group != SS_IMUL_R;
 		bool different_last_op = registers[i].last_op_group != inst->op_group || registers[i].last_op_par != inst->op_group_par;
 		bool not_r5 = inst->kind != SS_IADD_RS || i != RegisterNeedsDisplacement;
@@ -307,18 +315,21 @@ int schedule_uop(bool commit, ss_uop_t uop, ss_uop_t port_busy[CYCLE_MAP_SIZE][3
 	for (; cycle < CYCLE_MAP_SIZE; ++cycle) {
 		if ((uop & UOP_P5) != 0 && !port_busy[cycle][2]) {
 			if (commit) {
+				printf("; P5 at cycle %d\n", cycle);
 				port_busy[cycle][2] = uop;
 			}
 			return cycle;
 		}
 		if ((uop & UOP_P0) != 0 && !port_busy[cycle][0]) {
 			if (commit) {
+				printf("; P0 at cycle %d\n", cycle);
 				port_busy[cycle][0] = uop;
 			}
 			return cycle;
 		}
 		if ((uop & UOP_P1) != 0 && !port_busy[cycle][1]) {
 			if (commit) {
+				printf("; P1 at cycle %d\n", cycle);
 				port_busy[cycle][1] = uop;
 			}
 			return cycle;
@@ -328,6 +339,7 @@ int schedule_uop(bool commit, ss_uop_t uop, ss_uop_t port_busy[CYCLE_MAP_SIZE][3
 }
 
 int schedule_mop(bool commit, ss_mop_t mop, bool is_dependent, ss_uop_t port_busy[CYCLE_MAP_SIZE][3], int cycle, int dep_cycle) {
+	printf("schedule_mop: schedule_mop %s, is_dependent = %d, cycle = %d, dep_cycle = %d\n", mop_info[mop].name, is_dependent, cycle, dep_cycle);
 	// if this macro-op depends on the previous one, increase the starting cycle if needed
 	// this handles an explicit dependency chain in IMUL_RCP
 	if (is_dependent) {
@@ -335,6 +347,9 @@ int schedule_mop(bool commit, ss_mop_t mop, bool is_dependent, ss_uop_t port_bus
 	}
 	// move instructions are eliminated and don't need an execution unit
 	if (mop_info[mop].uop0 == UOP_NULL) {
+		if (commit) {
+			printf("; (eliminated)\n");
+		}
 		return cycle;
 	}
 	// this macro-op has only one uOP
@@ -359,20 +374,19 @@ int schedule_mop(bool commit, ss_mop_t mop, bool is_dependent, ss_uop_t port_bus
 	return -1;
 }
 
-#define printf(...)
-
 void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 
-	ss_uop_t port_busy[CYCLE_MAP_SIZE][3] = {};
+	ss_uop_t port_busy[CYCLE_MAP_SIZE][3];
+	memset(port_busy, 0, sizeof(port_busy));
 	ss_reginfo_t registers[8];
 
 	for (int i = 0; i < 8; i++) {
-		registers[i] = (ss_reginfo_t){ 0, SS_INST_INVALID, -1, 0 };
+		registers[i] = (ss_reginfo_t){0, SS_INST_INVALID, -1, 0};
 	}
 
 	decode_group_t group;
 	ss_inst_desc_t inst = {
-		.kind  = SS_INST_INVALID,
+		.kind = SS_INST_INVALID,
 		.op_group = SS_INST_INVALID,
 	};
 
@@ -395,6 +409,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 	for (; decode_cycle < RANDOMX_SUPERSCALAR_LATENCY && !ports_saturated && program_size < SUPERSCALAR_MAX_SIZE; decode_cycle++) {
 		int buffer_idx = 0;
 
+		printf("mul_count = %d, inst kind = %s, decode_cycle = %d\n", mul_count, inst_info[inst.kind].name, decode_cycle);
 		group = fetch_next(S, inst.kind, decode_cycle, mul_count);
 
 		printf("; ------------- fetch cycle %d (%s)\n", cycle, decode_buffer[group].name);
@@ -402,7 +417,6 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 		// fill all instruction slots in the current decode buffer
 		while (buffer_idx < decode_buffer[group].size) {
 			int top_cycle = cycle;
-			bool is_last = decode_buffer[group].size == buffer_idx + 1;
 
 			// if we have issued all macro-ops for the current RandomX instruction, create a new instruction
 			if (inst.op_group == SS_INST_INVALID || macro_op_index >= inst_info[inst.kind].mops_len) {
@@ -410,13 +424,15 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 					break;
 				}
 
-				inst = create_for_slot(S, decode_buffer[group].slots[buffer_idx], group, is_last, buffer_idx == 0);
+				// select an instruction so that the first macro-op fits into the current slot
+				inst = create_for_slot(S, decode_buffer[group].slots[buffer_idx], group, buffer_idx == decode_buffer[group].size - 1);
 				macro_op_index = 0;
 				printf("; %s\n", inst_info[inst.kind].name);
 			}
 
 			ss_mop_t mop = inst_info[inst.kind].mops[macro_op_index];
-			bool mop_dependent = is_last && inst_info[inst.kind].final_mop_dependent;
+			bool mop_is_last = macro_op_index == inst_info[inst.kind].mops_len - 1;
+			bool mop_dependent = mop_is_last && inst_info[inst.kind].final_mop_dependent;
 			printf("%s ", mop_info[mop].name);
 
 			// calculate the earliest cycle when this macro-op (all of its uOPs) can be scheduled for execution
@@ -451,6 +467,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 				printf("; src = r%d\n", inst.src);
 			}
 			// find a destination register that will be ready when this instruction executes
+			printf("macro_op_index = %d, inst_info[inst.kind].dst_op = %d\n", macro_op_index, inst_info[inst.kind].dst_op);
 			if (macro_op_index == inst_info[inst.kind].dst_op) {
 				int forward;
 				for (forward = 0; forward < LOOK_FORWARD_CYCLES && !inst_select_destination(S, &inst, schedule_cycle, throw_away_count > 0, registers); forward++) {
@@ -486,6 +503,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 
 			// calculate when the result will be ready
 			dep_cycle = schedule_cycle + mop_info[mop].latency;
+			printf("CENTRE0: dep_cycle = %d, schedule_cycle = %d, cycle = %d, latency = %d\n", dep_cycle, schedule_cycle, cycle, mop_info[mop].latency);
 
 			// if this instruction writes the result, modify register information
 			//   RegisterInfo.latency - which cycle the register will be ready
@@ -516,7 +534,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 				prog->instructions[program_size++] = (ss_inst_t){
 					.opcode = inst.kind,
 					.dst = inst.dst,
-					.src = inst.src,
+					.src = inst.src >= 0 ? inst.src : inst.dst,
 					.imm32 = inst.imm32,
 					.mod = inst.mod,
 				};
