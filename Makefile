@@ -1,38 +1,10 @@
-## bun build.ts (will execute this Makefile)
-#
-#WAT_SOURCES := $(shell find . -type f -name '*.wat' -not -path './node_modules/*')
-#WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
-#
-#C_SOURCES := $(shell find . -type f -name '*.c' -not -path './node_modules/*')
-#MAIN_C_SOURCES := $(shell find . -type f -name 'main.c' -not -path './node_modules/*')
-#MAIN_C_WASM_FILES := $(patsubst %.c,%.wasm,$(MAIN_C_SOURCES))
-#MAIN_C_JS_FILES := $(patsubst %.c,%.js,$(MAIN_C_SOURCES))
-#
-#HEADER_FILES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
-#HEADER_FILES += include/configuration.h
-#
-#all: $(WAT_WASM_FILES) $(MAIN_C_JS_FILES) $(MAIN_C_WASM_FILES)
-#
-#include/configuration.h: include/configuration.ts
-#	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
-#
-#%.wasm: %.wat
-#	wat2wasm --enable-all $< -o $@
-
-#%main.wasm: $(C_SOURCES) $(HEADER_FILES)
-#	clang --target=wasm32 -nostdlib -fno-builtin -Iinclude \
-#		-O3 -msimd128 -mbulk-memory \
-#		-Wl,--no-entry -Wl,-z,stack-size=8192 \
-#		-o $@ $(C_SOURCES)
-#
-#	wasm-strip $@
-#	wasm-opt -all -O4 -Oz $@ -o $@
-#
-#%main.js: %main.wasm
-#	printf "$(subst $(newline),\n,${js_template})" > $@
-
 H_SOURCES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
+
+JIT_STUBS_C_SOURCES := $(shell find src/jit/stubs -type f -name '*.c')
+JIT_STUBS_H_SOURCES := $(subst .c,.h,$(JIT_STUBS_C_SOURCES))
+
 H_SOURCES += include/configuration.h
+H_SOURCES += $(JIT_STUBS_H_SOURCES)
 
 PRINTF_C_SOURCES := $(shell find src/printf -type f -name '*.c')
 BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SOURCES)
@@ -41,16 +13,27 @@ JIT_C_SOURCES := $(shell find src/jit -type f -name '*.c') $(BLAKE2B_C_SOURCES) 
 DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES))
 TESTS_C_SOURCES := $(sort $(shell find src/tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES))
 
+# https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude \
 	-msimd128 -mbulk-memory
 
 # -matomics -Wl,--shared-memory to use shared memory
 
+.PHONY: all clean
 all: src/dataset/dataset.wasm src/tests/harness.wasm
+
+clean:
+	rm -f **/*.wasm **/*.wasm.pages.ts include/configuration.h src/jit/stubs/*.h
+	rm -rf dist
 
 include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
+
+src/jit/stubs/%.wasm: src/jit/stubs/%.c
+	clang -O3 $(CFLAGS) $(LDFLAGS) -o $@ $<
+src/jit/stubs/%.h: src/jit/stubs/%.wasm
+	./stubgen.ts $< > $@
 
 src/tests/harness.wasm: $(TESTS_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
@@ -70,5 +53,5 @@ src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 # extract the memory
 #  - memory[0] pages: initial=4097 <- env.memory
 #                             ^^^^
-	wasm-objdump -x $@ | sed -n 's/.*initial=\([0-9]\+\).*/export default \1/p' \
+	wasm-objdump -x $@ | sed -n 's/.*memory.*initial=\([0-9]\+\).*/export default \1/p' \
 		> src/dataset/dataset.wasm.pages.ts

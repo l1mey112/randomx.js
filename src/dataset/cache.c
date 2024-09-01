@@ -3,7 +3,7 @@
 #include "configuration.h"
 #include "wasm.h"
 
-#include "ssh.h"
+#include "../jit/ssh.h"
 #include "../jit/jit.h"
 
 #include <stdint.h>

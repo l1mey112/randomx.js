@@ -81,6 +81,18 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 		p += __len;                                  \
 	} while (0)
 
+// memcpy the WASM_THUNK({ 0x00, 0x00, 0x00, 0x00 }) to the end of the function
+#define WASM_U8_THUNK(...)                                             \
+	memcpy(p, (uint8_t[])__VA_ARGS__, sizeof((uint8_t[])__VA_ARGS__)); \
+	p += sizeof((uint8_t[])__VA_ARGS__)
+
+#define WASM_U32_WITH_STUB(stub)       \
+	do {                               \
+		WASM_U32(sizeof(stub));        \
+		memcpy(p, stub, sizeof(stub)); \
+		p += sizeof(stub);             \
+	} while (0)
+
 #define WASM_SECTION(type, ...) \
 	WASM_U8(type);              \
 	WASM_U32_PATCH(__VA_ARGS__)
@@ -98,8 +110,3 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 #define WASM_SECTION_CODE 0x0A
 #define WASM_SECTION_DATA 0x0B
 #define WASM_SECTION_DATACOUNT 0x0C
-
-// memcpy the WASM_THUNK({ 0x00, 0x00, 0x00, 0x00 }) to the end of the function
-#define WASM_U8_THUNK(...)                                             \
-	memcpy(p, (uint8_t[])__VA_ARGS__, sizeof((uint8_t[])__VA_ARGS__)); \
-	p += sizeof((uint8_t[])__VA_ARGS__)

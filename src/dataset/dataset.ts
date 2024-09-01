@@ -66,7 +66,10 @@ export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }
 }
 
 const g = await dataset(new Uint8Array())
-console.log(g.thunk)
+// hexdump thunk
+/* for (let i = 0; i < g.thunk.length; i += 16) {
+	console.log(g.thunk.slice(i, i + 16).reduce((acc, v) => acc + v.toString(16).padStart(2, '0') + ' ', ''))
+} */
 
 const k = await WebAssembly.instantiate(g.thunk)
 console.log(k.instance.exports)

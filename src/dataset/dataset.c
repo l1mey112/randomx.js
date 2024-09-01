@@ -4,7 +4,7 @@
 #include "wasm.h"
 #include "cache.h"
 
-#include "ssh.h"
+#include "../jit/ssh.h"
 #include "../jit/jit.h"
 
 #include <stdint.h>
