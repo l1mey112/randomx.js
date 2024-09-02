@@ -6,12 +6,11 @@ import wasm_pages from './dataset.wasm.pages'
 type DatasetModule = {
 	memory: WebAssembly.Memory
 
-	Kb(): number // key buffer
-	Cb(): number // cache
-	Jb(): number // jit
+	b(): number // jit
 	K(key_length: number): number
 }
 
+// can be shared between threads safely if shared memory is enabled
 type Cache = {
 	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
 	thunk: Uint8Array // WASM JIT code
@@ -36,8 +35,7 @@ export async function randomx_cache(K?: Uint8Array, conf?: { shared?: boolean })
 	// 2. memory import must be set to shared
 	//    - can be patched based if needed
 
-	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: !!conf?.shared  })
-
+	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: !!conf?.shared })
 	const module = await WebAssembly.instantiate(wasm, {
 		e: {
 			ch: env_npf_putc
@@ -49,13 +47,11 @@ export async function randomx_cache(K?: Uint8Array, conf?: { shared?: boolean })
 
 	const exports = module.instance.exports as DatasetModule
 
-	const key_begin = exports.Kb()
-	const key_buffer = new Uint8Array(memory.buffer, key_begin, 60)
-
+	const jit_begin = exports.b()
+	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
-	const jit_size = exports.K(K.length) // long blocking
 
-	const jit_begin = exports.Jb()
+	const jit_size = exports.K(K.length) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
 	return {

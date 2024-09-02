@@ -109,7 +109,7 @@ uint32_t ssh_iadd_c(SSH_JIT_PARAMS) {
 	THUNK_BEGIN
 
 	// sign extended imm32
-	uint64_t imm64 = (int32_t)inst->imm32;
+	int64_t imm64 = (int32_t)inst->imm32;
 
 	// (local.set $dest (i64.add (local.get $dest) (i64.const $imm)))
 	WASM_U8_THUNK({
@@ -131,7 +131,7 @@ uint32_t ssh_ixor_c(SSH_JIT_PARAMS) {
 	THUNK_BEGIN
 
 	// sign extended imm32
-	uint64_t imm64 = (int32_t)inst->imm32;
+	int64_t imm64 = (int32_t)inst->imm32;
 
 	// (local.set $dest (i64.xor (local.get $dest) (i64.const $imm)))
 	WASM_U8_THUNK({
@@ -321,7 +321,7 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 		p += access_mix_block(p, cache_ptr);
 		p += xor_mix_block(p);
 
-		// cacheIndex = r[longest dependency chain??]
+		// cacheIndex = r[longest dependency chain]
 
 		// (local.set $item_number (local.get $r[ith_program->addr_reg]))
 		WASM_U8_THUNK({
@@ -340,7 +340,7 @@ uint32_t ssh_jit(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache, uint
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#type-section
 	WASM_SECTION(WASM_SECTION_TYPE, {
-		WASM_U32_2(); // function types = vec(1)
+		WASM_U8(2); // function types = vec(1)
 
 		WASM_U8_THUNK({
 			// function type 0 : (i64) -> (i64, i64, i64, i64, i64, i64, i64, i64)
@@ -368,7 +368,7 @@ uint32_t ssh_jit(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache, uint
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-importsec
 	WASM_SECTION(WASM_SECTION_IMPORT, {
-		WASM_U32(1); // imports = vec(1)
+		WASM_U8(1); // imports = vec(1)
 
 		// import 0: e.m
 		WASM_U32_NAME("e");
@@ -393,17 +393,17 @@ uint32_t ssh_jit(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache, uint
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-exportsec
 	WASM_SECTION(WASM_SECTION_EXPORT, {
-		WASM_U32(1); // exports = vec(1)
+		WASM_U8(1); // exports = vec(1)
 
 		// export 0: d
 		WASM_U32_NAME("d");
 		WASM_U8(0x00); // export kind = func
-		WASM_U32(0); // function index = 0
+		WASM_U32(0);   // function index = 0
 	});
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec
 	WASM_SECTION(WASM_SECTION_CODE, {
-		WASM_U32_3(); // functions = vec(3)
+		WASM_U8(3); // functions = vec(3)
 
 		// function 0
 		WASM_U32_PATCH({
