@@ -1,20 +1,27 @@
 #include "wasm.h"
 #include <stdint.h>
 
+#define LO(x) ((x)&0xffffffff)
+#define HI(x) ((x)>>32)
+
+static inline uint64_t mul128hi(uint64_t a, uint64_t b) {
+	uint64_t ah = HI(a), al = LO(a);
+	uint64_t bh = HI(b), bl = LO(b);
+	uint64_t x00 = al * bl;
+	uint64_t x01 = al * bh;
+	uint64_t x10 = ah * bl;
+	uint64_t x11 = ah * bh;
+	uint64_t m1 = LO(x10) + LO(x01) + HI(x00);
+	uint64_t m2 = HI(x10) + HI(x01) + LO(x11) + HI(m1);
+	uint64_t m3 = HI(x11) + HI(m2);
+
+	return (m3 << 32) + LO(m2);
+}
+
 WASM_EXPORT("imul128hi")
-int64_t imul128hi(uint64_t lhs, uint64_t rhs) {
-	uint64_t lo_lo = (lhs & 0xFFFFFFFF) * (rhs & 0xFFFFFFFF);
-	uint64_t hi_lo = (lhs >> 32) * (rhs & 0xFFFFFFFF);
-	uint64_t lo_hi = (lhs & 0xFFFFFFFF) * (rhs >> 32);
-	uint64_t hi_hi = (lhs >> 32) * (rhs >> 32);
-
-	uint64_t cross = (lo_lo >> 32) + (hi_lo & 0xFFFFFFFF) + lo_hi;
-	uint64_t upper = (hi_lo >> 32) + (cross >> 32) + hi_hi;
-
-	int64_t lhs_sign_ext = ((int64_t)lhs < 0) ? -1 : 0;
-	int64_t rhs_sign_ext = ((int64_t)rhs < 0) ? -1 : 0;
-
-	upper += (uint64_t)(lhs_sign_ext * (int64_t)rhs) + (uint64_t)(rhs_sign_ext * (int64_t)lhs);
-
-	return (int64_t)upper;
+int64_t imul128hi(int64_t a, int64_t b) {
+	int64_t hi = mul128hi(a, b);
+	if (a < 0LL) hi -= b;
+	if (b < 0LL) hi -= a;
+	return hi;
 }

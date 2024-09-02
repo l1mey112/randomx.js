@@ -33,8 +33,6 @@ void *get_jit() {
 
 WASM_EXPORT("K")
 uint32_t init_new_key(uint32_t key_length) {
-	printf("[K] initialise cache with key length %u\n", key_length);
-
 	init_new_cache(K_buffer, key_length, cache);
 
 	// sshash_program_t program[RANDOMX_CACHE_ACCESSES];
@@ -46,7 +44,7 @@ uint32_t init_new_key(uint32_t key_length) {
 		ssh_generate(S, &programs[i]);
 	}
 
-	uint32_t wasm_size = ssh_jit(programs, jit_buffer);
+	uint32_t wasm_size = ssh_jit(programs, cache, jit_buffer);
 
 	return wasm_size;
 }

@@ -12,12 +12,14 @@ type DatasetModule = {
 	K(key_length: number): number
 }
 
-export type Dataset = {
-	buffer: Uint8Array // backing ArrayBuffer or SharedArrayBuffer
-	thunk: Uint8Array
+type Cache = {
+	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
+	thunk: Uint8Array // WASM JIT code
 }
 
-export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }): Promise<Dataset> {
+export async function randomx_cache(K?: Uint8Array, conf?: { shared?: boolean }): Promise<Cache> {
+	K ??= new Uint8Array()
+
 	if (K.length > 60) {
 		throw new Error('Key length is too long (max 60 bytes)')
 	}
@@ -53,23 +55,26 @@ export default async function dataset(K: Uint8Array, conf?: { shared?: boolean }
 	key_buffer.set(K)
 	const jit_size = exports.K(K.length) // long blocking
 
-	const cache_begin = exports.Cb()
-	const cache_buffer = new Uint8Array(memory.buffer, cache_begin, RANDOMX_ARGON_MEMORY * 1024)
-
 	const jit_begin = exports.Jb()
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
 	return {
-		buffer: cache_buffer,
+		memory,
 		thunk: jit_buffer,
 	}
 }
 
-const g = await dataset(new Uint8Array())
-// hexdump thunk
-/* for (let i = 0; i < g.thunk.length; i += 16) {
-	console.log(g.thunk.slice(i, i + 16).reduce((acc, v) => acc + v.toString(16).padStart(2, '0') + ' ', ''))
-} */
+type SuperscalarHash = {
+	d: (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+}
 
-const k = await WebAssembly.instantiate(g.thunk)
-console.log(k.instance.exports)
+export async function randomx_superscalarhash(cache: Cache): Promise<SuperscalarHash['d']> {
+	const module = await WebAssembly.instantiate(cache.thunk, {
+		e: {
+			m: cache.memory
+		}
+	})
+
+	const exports = module.instance.exports as SuperscalarHash
+	return exports.d
+}

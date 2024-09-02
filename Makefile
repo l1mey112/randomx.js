@@ -32,6 +32,7 @@ include/configuration.h: include/configuration.ts
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
 	clang -O3 $(CFLAGS) $(LDFLAGS) -o $@ $<
+	wasm-opt -all -O4 -Oz $@ -o $@
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
 	./stubgen.ts $< > $@
 

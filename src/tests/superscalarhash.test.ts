@@ -1,5 +1,6 @@
 import { test, expect } from 'bun:test'
 import { buffer, module }  from './harness'
+import { randomx_cache, randomx_superscalarhash } from '../dataset/dataset'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
@@ -25,4 +26,19 @@ test('chained programs', () => {
 		const hash = Buffer.from(buffer.slice(0, 32))
 		expect(hash).toEqual(superscalar[i])
 	}
+})
+
+test('dataset initialisation', async () => {
+	const cache = await randomx_cache(new TextEncoder().encode('test key 000'))
+	const hash = await randomx_superscalarhash(cache)
+
+	const dataset_items_0 = hash(0n)
+	const dataset_items_10000000 = hash(10000000n)
+	const dataset_items_20000000 = hash(20000000n)
+	const dataset_items_30000000 = hash(30000000n)
+
+	expect(dataset_items_0[0]).toEqual(BigInt.asIntN(64, 0x680588a85ae222dbn))
+	expect(dataset_items_10000000[0]).toEqual(BigInt.asIntN(64, 0x7943a1f6186ffb72n))
+	expect(dataset_items_20000000[0]).toEqual(BigInt.asIntN(64, 0x9035244d718095e1n))
+	expect(dataset_items_30000000[0]).toEqual(BigInt.asIntN(64, 0x145a5091f7853099n))
 })

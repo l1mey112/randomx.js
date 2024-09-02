@@ -1,15 +1,20 @@
 #include "wasm.h"
 #include <stdint.h>
 
+#define LO(x) ((x)&0xffffffff)
+#define HI(x) ((x)>>32)
+
 WASM_EXPORT("mul128hi")
-uint64_t mul128hi(uint64_t lhs, uint64_t rhs) {
-	uint64_t lo_lo = (lhs & 0xFFFFFFFF) * (rhs & 0xFFFFFFFF);
-	uint64_t hi_lo = (lhs >> 32) * (rhs & 0xFFFFFFFF);
-	uint64_t lo_hi = (lhs & 0xFFFFFFFF) * (rhs >> 32);
-	uint64_t hi_hi = (lhs >> 32) * (rhs >> 32);
+uint64_t mul128hi(uint64_t a, uint64_t b) {
+	uint64_t ah = HI(a), al = LO(a);
+	uint64_t bh = HI(b), bl = LO(b);
+	uint64_t x00 = al * bl;
+	uint64_t x01 = al * bh;
+	uint64_t x10 = ah * bl;
+	uint64_t x11 = ah * bh;
+	uint64_t m1 = LO(x10) + LO(x01) + HI(x00);
+	uint64_t m2 = HI(x10) + HI(x01) + LO(x11) + HI(m1);
+	uint64_t m3 = HI(x11) + HI(m2);
 
-	uint64_t cross = (lo_lo >> 32) + (hi_lo & 0xFFFFFFFF) + lo_hi;
-	uint64_t upper = (hi_lo >> 32) + (cross >> 32) + hi_hi;
-
-	return upper;
+	return (m3 << 32) + LO(m2);
 }

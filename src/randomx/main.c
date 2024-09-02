@@ -31,8 +31,6 @@ void *get_input_buffer() {
 
 WASM_EXPORT("K")
 void init_new_key(uint32_t key_length) {
-	printf("[K] initialise cache with key length %u\n", key_length);
-
 	// create new cache
 	uint32_t memory_blocks, segment_length;
 	argon2_instance_t instance;

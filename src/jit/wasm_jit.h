@@ -13,20 +13,20 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 	} while (0)
 
 // uleb128
-#define WASM_U32(v)            \
-	do {                       \
-		p += u32_leb128(v, p); \
+#define WASM_U32(v)              \
+	do {                         \
+		p += u32_leb128((v), p); \
 	} while (0)
 
 // sleb128
-#define WASM_I64(v)            \
-	do {                       \
-		p += i64_leb128(v, p); \
+#define WASM_I64(v)              \
+	do {                         \
+		p += i64_leb128((v), p); \
 	} while (0)
 
-#define WASM_I32(v)           \
-	do {                      \
-		WASM_I64((int32_t)v); \
+#define WASM_I32(v)             \
+	do {                        \
+		WASM_I64((int32_t)(v)); \
 	} while (0)
 
 // >127 means 2+ bytes
@@ -81,10 +81,18 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 		p += __len;                                  \
 	} while (0)
 
-// memcpy the WASM_THUNK({ 0x00, 0x00, 0x00, 0x00 }) to the end of the function
 #define WASM_U8_THUNK(...)                                             \
 	memcpy(p, (uint8_t[])__VA_ARGS__, sizeof((uint8_t[])__VA_ARGS__)); \
 	p += sizeof((uint8_t[])__VA_ARGS__)
+
+#define WASM_U32_U8_THUNK(...)                \
+	WASM_U32(sizeof((uint8_t[])__VA_ARGS__)); \
+	WASM_U8_THUNK(__VA_ARGS__)
+
+#define WASM_U32_NAME(name)               \
+	WASM_U32(sizeof(name "") - 1);        \
+	memcpy(p, name, sizeof(name "") - 1); \
+	p += sizeof(name "") - 1
 
 #define WASM_U32_WITH_STUB(stub)       \
 	do {                               \
