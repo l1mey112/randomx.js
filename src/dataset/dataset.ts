@@ -3,19 +3,17 @@ import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
 
 type DatasetModule = {
-	memory: WebAssembly.Memory
-
-	b(): number // jit
+	b(): number
 	K(key_length: number): number
 }
 
 // can be shared between threads safely if shared memory is enabled
-type Cache = {
+export type Cache = {
 	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
 	thunk: Uint8Array // WASM JIT code
 }
 
-export async function randomx_cache(K?: Uint8Array, conf?: { shared?: boolean }): Promise<Cache> {
+export async function randomx_construct_cache(K?: Uint8Array, conf?: { shared?: boolean }): Promise<Cache> {
 	K ??= new Uint8Array()
 
 	if (K.length > 60) {

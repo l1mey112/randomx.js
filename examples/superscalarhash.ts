@@ -1,6 +1,6 @@
-import { randomx_cache, randomx_superscalarhash } from '../src/dataset/dataset'
+import { randomx_construct_cache, randomx_superscalarhash } from '../src/index'
 
-const cache = await randomx_cache()
+const cache = await randomx_construct_cache()
 const hash = await randomx_superscalarhash(cache)
 
 for (let i = 0n; i < 10n; ++i) {
