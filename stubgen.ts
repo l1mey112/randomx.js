@@ -80,7 +80,7 @@ if (local_entries > 127) {
 
 // prepend the local entries
 const local_entries_comment = `local[${local_entries}]`
-bytes_and_comments.unshift([`0x${local_entries.toString(16)},`, local_entries_comment])
+bytes_and_comments.unshift([`0x${local_entries.toString(16).padStart(2, '0')},`, local_entries_comment])
 if (local_entries_comment.length > largest_to_pad) {
 	largest_to_pad = local_entries_comment.length
 }
