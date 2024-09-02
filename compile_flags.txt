@@ -1,2 +1,3 @@
 # fuck this bullshit (https://github.com/clangd/clangd/issues/1038)
--I./include
+-Iinclude
+-Isrc

@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import { plugin } from "bun"
 
 await plugin({

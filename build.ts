@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import esbuild from 'esbuild'
 import type { BuildOptions } from 'esbuild'
 import { $ } from 'bun'
@@ -76,4 +78,4 @@ await esbuild.build({
 	plugins: [...plug]
 })
 
-await $`bunx tsc src/index.ts src/module.d.ts --declaration --emitDeclarationOnly --skipLibCheck --outFile dist/index.d.ts`.nothrow()
+await $`bunx tsc src/index.ts src/module.d.ts --declaration --emitDeclarationOnly --skipLibCheck --skipDefaultLibCheck --noResolve --outFile dist/index.d.ts`.nothrow()

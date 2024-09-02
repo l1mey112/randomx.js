@@ -1,4 +1,3 @@
-import { RANDOMX_ARGON_MEMORY } from '../../include/configuration'
 import { env_npf_putc } from '../printf/printf'
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
@@ -60,17 +59,18 @@ export async function randomx_cache(K?: Uint8Array, conf?: { shared?: boolean })
 	}
 }
 
-type SuperscalarHash = {
-	d: (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+type SuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+type SuperscalarHashModule = {
+	d: SuperscalarHash
 }
 
-export async function randomx_superscalarhash(cache: Cache): Promise<SuperscalarHash['d']> {
+export async function randomx_superscalarhash(cache: Cache): Promise<SuperscalarHash> {
 	const module = await WebAssembly.instantiate(cache.thunk, {
 		e: {
 			m: cache.memory
 		}
 	})
 
-	const exports = module.instance.exports as SuperscalarHash
+	const exports = module.instance.exports as SuperscalarHashModule
 	return exports.d
 }

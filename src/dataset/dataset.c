@@ -1,11 +1,11 @@
-#include "../blake2b/blake2b.h"
-#include "argon2fill.h"
+#include "blake2b/blake2b.h"
+#include "argon2fill/argon2fill.h"
 #include "configuration.h"
 #include "wasm.h"
 #include "cache.h"
 
-#include "../jit/ssh.h"
-#include "../jit/jit.h"
+#include "jit/ssh.h"
+#include "jit/jit.h"
 
 #include <stdint.h>
 

@@ -1,8 +1,9 @@
-#include "../blake2b/blake2b.h"
-#include "../dataset/cache.h"
-#include "../jit/ssh.h"
 #include "configuration.h"
 #include "wasm.h"
+
+#include "blake2b/blake2b.h"
+#include "dataset/cache.h"
+#include "jit/ssh.h"
 
 #include <stdint.h>
 
