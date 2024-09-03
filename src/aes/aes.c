@@ -35,7 +35,7 @@
     The modified state is written back to 'state' to allow multiple
     calls to this function.
 */
-void fillAes1Rx4(uint8_t state[64], uint32_t output_size, uint8_t *buffer) {
+void fillAes1Rx4(const uint8_t state[64], uint32_t output_size, uint8_t *buffer) {
 	assume(output_size % 64 == 0);
 
 	const uint8_t *outptr = (uint8_t *)buffer;
@@ -74,7 +74,7 @@ void fillAes1Rx4(uint8_t state[64], uint32_t output_size, uint8_t *buffer) {
 	wasm_v128_store((v128_t *)state + 3, state3);
 }
 
-void fillAes4Rx4(uint8_t state[64], uint32_t output_size, uint8_t *buffer) {
+void fillAes4Rx4(const uint8_t state[64], uint32_t output_size, uint8_t *buffer) {
 	assume(output_size % 64 == 0);
 
 	const uint8_t *outptr = (uint8_t *)buffer;

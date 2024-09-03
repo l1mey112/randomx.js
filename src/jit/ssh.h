@@ -3,11 +3,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../blake2b/blake2b.h"
+#include "blake2b/blake2b.h"
 #include "configuration.h"
+#include "inst.h"
 
 typedef struct ss_program_t ss_program_t;
-typedef struct ss_inst_t ss_inst_t;
+typedef struct rx_inst_t rx_inst_t;
 typedef enum ss_inst_kind_t ss_inst_kind_t;
 
 //                  Intel Ivy Bridge reference
@@ -31,18 +32,8 @@ enum ss_inst_kind_t { // uOPs (decode)   execution ports         latency       c
 	SS_INST_INVALID = -1
 };
 
-// WARNING: adjusting the layout of ss_inst_t will break tests
-
-struct ss_inst_t {
-	uint8_t opcode;
-	uint8_t dst;
-	uint8_t src;
-	uint8_t mod;
-	uint32_t imm32;
-};
-
 struct ss_program_t {
-	ss_inst_t instructions[SUPERSCALAR_MAX_SIZE];
+	rx_inst_t instructions[SUPERSCALAR_MAX_SIZE];
 	uint32_t size;
 
 	int addr_reg;

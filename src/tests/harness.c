@@ -74,5 +74,5 @@ static ss_program_t SSH[1];
 WASM_EXPORT("ssh_generate_hash256")
 void export_ssh_generate(void) {
 	ssh_generate(BLAKE2B_GEN_S, SSH);
-	blake2b(scratch, 32, SSH->instructions, sizeof(ss_inst_t) * SSH->size);
+	blake2b(scratch, 32, SSH->instructions, sizeof(rx_inst_t) * SSH->size);
 }

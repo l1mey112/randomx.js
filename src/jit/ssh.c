@@ -531,7 +531,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 
 			// when all macro-ops of the current instruction have been issued, add the instruction into the program
 			if (macro_op_index >= inst_info[inst.kind].mops_len) {
-				prog->instructions[program_size++] = (ss_inst_t){
+				prog->instructions[program_size++] = (rx_inst_t){
 					.opcode = inst.kind,
 					.dst = inst.dst,
 					.src = inst.src >= 0 ? inst.src : inst.dst,
@@ -550,7 +550,7 @@ void ssh_generate(blake2b_generator_state *S, ss_program_t *prog) {
 	// Calculate ASIC latency:
 	// Assumes 1 cycle latency for all operations and unlimited parallelization.
 	for (int i = 0; i < program_size; i++) {
-		ss_inst_t *instr = &prog->instructions[i];
+		rx_inst_t *instr = &prog->instructions[i];
 		int lat_dst = prog->asic_latencies[instr->dst] + 1;
 		int lat_src = instr->dst != instr->src ? prog->asic_latencies[instr->src] + 1 : 0;
 		prog->asic_latencies[instr->dst] = lat_dst > lat_src ? lat_dst : lat_src;

@@ -1,15 +1,16 @@
 #include "configuration.h"
 #include "ssh.h"
 #include "wasm_jit.h"
+#include "inst.h"
 
 #include <stdint.h>
 
 #include "stubs/imul128hi.h"
 #include "stubs/mul128hi.h"
 
-#define SSH_JIT_PARAMS __attribute__((unused)) ss_inst_t *inst, uint8_t *buf
+#define SSH_JIT_PARAMS __attribute__((unused)) rx_inst_t *inst, uint8_t *buf
 
-// take in `buf` and `ss_inst_t*` and return the number of bytes written to `buf`
+// take in `buf` and `rx_inst_t*` and return the number of bytes written to `buf`
 typedef uint32_t (*ssh_jit_fn)(SSH_JIT_PARAMS);
 
 // all instructions here are two-address basically x86 instructions
@@ -24,10 +25,6 @@ typedef uint32_t (*ssh_jit_fn)(SSH_JIT_PARAMS);
 static const uint8_t $item_number = 0, $mixblock_ptr = 1, $r0 = 2, $r1 = 3, $r2 = 4, $r3 = 5, $r4 = 6, $r5 = 7, $r6 = 8, $r7 = 9;
 
 #define R(x) (x + 2)
-
-#define MOD_MEM(x) (x & 3)
-#define MOD_SHIFT(x) ((x >> 2) & 3)
-#define MOD_COND(x) (x >> 4)
 
 uint32_t ssh_isub_r(SSH_JIT_PARAMS) {
 	THUNK_BEGIN
@@ -311,7 +308,7 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 
 		// SuperscalarHash[i](r0, r1, r2, r3, r4, r5, r6, r7)
 		for (unsigned j = 0; j < ith_program->size; j++) {
-			ss_inst_t *inst = &ith_program->instructions[j];
+			rx_inst_t *inst = &ith_program->instructions[j];
 			ssh_jit_fn fn = tables[inst->opcode];
 			p += fn(inst, p);
 		}
