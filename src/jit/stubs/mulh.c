@@ -18,3 +18,11 @@ uint64_t mul128hi(uint64_t a, uint64_t b) {
 
 	return (m3 << 32) + LO(m2);
 }
+
+WASM_EXPORT("imul128hi")
+int64_t imul128hi(int64_t a, int64_t b) {
+	int64_t hi = mul128hi(a, b);
+	if (a < 0LL) hi -= b;
+	if (b < 0LL) hi -= a;
+	return hi;
+}

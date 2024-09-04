@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 
-#include "stubs/imul128hi.h"
-#include "stubs/mul128hi.h"
+#define FUNC_OFFSET 1
+#include "stubs/mulh.h"
 
 #define SSH_JIT_PARAMS __attribute__((unused)) rx_inst_t *inst, uint8_t *buf
 
