@@ -1,4 +1,4 @@
-#include "wasm.h"
+#include "freestanding.h"
 #include <stdint.h>
 
 #define LO(x) ((x)&0xffffffff)

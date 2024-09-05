@@ -5,7 +5,7 @@
 
 #include "ssh.h"
 #include "ssh_internal.h"
-#include "wasm.h"
+#include "freestanding.h"
 
 #define CYCLE_MAP_SIZE (RANDOMX_SUPERSCALAR_LATENCY + 4)
 #define LOOK_FORWARD_CYCLES 4

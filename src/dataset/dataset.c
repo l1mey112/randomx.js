@@ -1,7 +1,7 @@
 #include "blake2b/blake2b.h"
 #include "argon2fill/argon2fill.h"
 #include "configuration.h"
-#include "wasm.h"
+#include "freestanding.h"
 #include "cache.h"
 
 #include "jit/ssh.h"

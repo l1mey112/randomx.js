@@ -14,17 +14,19 @@ AES_C_SOURCES := $(shell find src/aes -type f -name '*.c')
 
 DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(ARGON2FILL_C_SOURCES))
 VM_C_SOURCES := $(sort $(shell find src/vm -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
-TESTS_C_SOURCES := $(sort $(shell find tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
+TESTS_C_SOURCES := $(sort $(shell find tests -maxdepth 1 -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
+
+UFLAGS = -Iinclude -Isrc
 
 # https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
-CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude -Isrc \
+CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(UFLAGS) \
 	-msimd128 -mbulk-memory
 
 # -matomics -Wl,--shared-memory to use shared memory
 
 .PHONY: all clean
-all: src/dataset/dataset.wasm src/vm/vm.wasm tests/harness.wasm
+all: src/dataset/dataset.wasm src/vm/vm.wasm tests/harness.wasm tests/semifloat/semifloat
 
 clean:
 	rm -f **/*.wasm **/*.wasm.pages.ts include/configuration.h src/jit/stubs/*.h
@@ -32,6 +34,10 @@ clean:
 
 include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
+
+tests/semifloat/semifloat: tests/semifloat/harness.c src/jit/stubs/semifloat.c
+	clang -march=native $(UFLAGS) -lm -O3 -o $@ \
+		tests/semifloat/harness.c src/jit/stubs/semifloat.c
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
 	clang -O3 $(CFLAGS) $(LDFLAGS) -o $@ $<

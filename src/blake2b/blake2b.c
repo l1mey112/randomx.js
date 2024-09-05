@@ -1,4 +1,4 @@
-#include "wasm.h"
+#include "freestanding.h"
 #include "blake2b.h"
 
 #include <stdint.h>

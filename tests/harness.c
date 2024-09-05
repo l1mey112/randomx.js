@@ -1,5 +1,5 @@
 #include "configuration.h"
-#include "wasm.h"
+#include "freestanding.h"
 
 #include "blake2b/blake2b.h"
 #include "dataset/cache.h"

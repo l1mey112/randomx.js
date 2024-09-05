@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef INFINITY
+#define INFINITY (__builtin_inff())
+#endif
+
 #ifdef __wasm__
 #define WASM_IMPORT(name) \
 	__attribute__((import_module("e"), import_name(name)))
@@ -19,8 +23,14 @@
 #define NULL ((void *)0)
 
 #define alignas _Alignas
-#define assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#define assume(cond)                 \
+	do {                             \
+		if (!(cond))                 \
+			__builtin_unreachable(); \
+	} while (0)
 #define unreachable() __builtin_unreachable()
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
 
 #ifndef WASM_NO_OPT
 #define WASM_UNROLL _Pragma("clang loop unroll(full)")

@@ -1,3 +1,4 @@
+tests/semifloat/semifloat
 include/configuration.h
 *main.js
 *.wasm

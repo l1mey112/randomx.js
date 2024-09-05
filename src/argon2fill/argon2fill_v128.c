@@ -1,5 +1,5 @@
 #include "argon2fill.h"
-#include "wasm.h"
+#include "freestanding.h"
 
 #include <stdint.h>
 #include <wasm_simd128.h>

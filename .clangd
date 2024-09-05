@@ -1,7 +1,5 @@
 CompileFlags:
-  # add [-msimd128, --target=wasm32] for wasm __builtins
-  Add: [-xc, -Wall, -Wextra, -Wshadow, -Wimplicit-fallthrough, -Xclang, -Iinclude, -msimd128, --target=wasm32]
-  Compiler: clang
+  Add: [-xc, -Wall, -Wextra, -Wshadow, -Wimplicit-fallthrough, -Iinclude]
 
 Diagnostics:
   Suppress: "-Wunknown-attributes"
@@ -9,3 +7,16 @@ Diagnostics:
 InlayHints:
   Designators: No
   ParameterNames: No
+---
+# add [-msimd128, --target=wasm32] for wasm __builtins
+# -msimd128, --target=wasm32
+If:
+  PathExclude: tests/semifloat.*
+CompileFlags:
+  Add: [--target=wasm32, -msimd128]
+  Compiler: clang
+---
+If:
+  PathMatch: tests/semifloat.*
+CompileFlags:
+  Add: [-march=native]

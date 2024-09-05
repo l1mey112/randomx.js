@@ -1,6 +1,6 @@
 #pragma once
 
-#include "wasm.h"
+#include "freestanding.h"
 
 #include <stdint.h>
 
