@@ -25,5 +25,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
   },
-  "include": ["src/module.d.ts", "src/**/*.ts", "include/**/*.ts"],
+  "include": ["wasm.d.ts", "tests/**/*.ts", "src/**/*.ts", "include/**/*.ts"],
 }

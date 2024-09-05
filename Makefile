@@ -14,7 +14,7 @@ AES_C_SOURCES := $(shell find src/aes -type f -name '*.c')
 
 DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(ARGON2FILL_C_SOURCES))
 VM_C_SOURCES := $(sort $(shell find src/vm -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
-TESTS_C_SOURCES := $(sort $(shell find src/tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
+TESTS_C_SOURCES := $(sort $(shell find tests -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
 
 # https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
@@ -24,7 +24,7 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin -Iinclude -Isrc \
 # -matomics -Wl,--shared-memory to use shared memory
 
 .PHONY: all clean
-all: src/dataset/dataset.wasm src/vm/vm.wasm src/tests/harness.wasm
+all: src/dataset/dataset.wasm src/vm/vm.wasm tests/harness.wasm
 
 clean:
 	rm -f **/*.wasm **/*.wasm.pages.ts include/configuration.h src/jit/stubs/*.h
@@ -39,7 +39,7 @@ src/jit/stubs/%.wasm: src/jit/stubs/%.c
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
 	./stubgen.ts $< > $@
 
-src/tests/harness.wasm: $(TESTS_C_SOURCES) $(H_SOURCES)
+tests/harness.wasm: $(TESTS_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
 		-o $@ $(TESTS_C_SOURCES)
 

@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { buffer, module }  from './harness'
-import { randomx_construct_cache, randomx_superscalarhash } from '../dataset/dataset'
+import { randomx_construct_cache, randomx_superscalarhash } from '../src/dataset/dataset'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
