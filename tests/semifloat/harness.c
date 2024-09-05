@@ -220,7 +220,7 @@ int main() {
 	_Bool failed = 0;
 	
 	for (int i = 0; i < (int)sizeof(instructions) / (int)sizeof(instructions[0]); i++) {
-		failed |= test(&instructions[i], 100);
+		failed |= test(&instructions[i], 100000);
 	}
 
 	return failed;

@@ -155,6 +155,12 @@ static inline v128_t mul_residue(v128_t a, v128_t b, v128_t c) {
 	return wasm_f64x2_add(resab, fma);
 }
 
+// reference:
+
+// f64x2            [  mant    exp+s ][  mant    exp+s ]
+// i32x4            [  lo   ][  hi   ][  lo   ][  hi   ]
+// wasm_i32x4_const(         ,        ,        ,        )
+
 // assume no NaN, subnormal, inf, or zero
 static inline v128_t frexp_reg_e_nozero_noinf(v128_t x, v128_t *eptr) {
 	/* int hx, ix, lx;
@@ -167,11 +173,11 @@ static inline v128_t frexp_reg_e_nozero_noinf(v128_t x, v128_t *eptr) {
 	__HI(x) = hx;
 	return x; */
 
-	v128_t ix = wasm_v128_and(x, wasm_i32x4_const(0x7ff00000, 0, 0x7ff00000, 0));
+	v128_t ix = wasm_v128_and(x, wasm_i32x4_const(0, 0x7ff00000, 0, 0x7ff00000));
 	*eptr = wasm_i64x2_sub(ix, wasm_i64x2_const(UINT64_C(1022) << 52, UINT64_C(1022) << 52));
 
-	v128_t hx = wasm_v128_and(x, wasm_i32x4_const(0x800fffff, 0xFFFFFFFF, 0x800fffff, 0xFFFFFFFF));
-	hx = wasm_v128_or(hx, wasm_i32x4_const(0x3fe00000, 0, 0x3fe00000, 0));
+	v128_t hx = wasm_v128_and(x, wasm_i32x4_const(0xFFFFFFFF, 0x800fffff, 0xFFFFFFFF, 0x800fffff));
+	hx = wasm_v128_or(hx, wasm_i32x4_const(0, 0x3fe00000, 0, 0x3fe00000));
 	return hx;
 }
 
@@ -184,11 +190,8 @@ static inline v128_t ldexp_reg_e_nozero_noinf(v128_t x, v128_t n) {
 	__HI(x) = (hx & 0x800fffff) | (k << 20);
 	return x; */
 
-	// n mask only to exponent
-
-	v128_t k = wasm_i64x2_add(wasm_v128_and(x, wasm_i32x4_const(0x7ff00000, 0, 0x7ff00000, 0)), n);
-	k = wasm_v128_and(k, wasm_i32x4_const(0x7ff00000, 0, 0x7ff00000, 0));
-	v128_t hx = wasm_v128_and(x, wasm_i32x4_const(0x800fffff, 0xFFFFFFFF, 0x800fffff, 0xFFFFFFFF));
+	v128_t k = wasm_i64x2_add(wasm_v128_and(x, wasm_i32x4_const(0, 0x7ff00000, 0, 0x7ff00000)), n);
+	v128_t hx = wasm_v128_and(x, wasm_i32x4_const(0xFFFFFFFF, 0x800fffff, 0xFFFFFFFF, 0x800fffff));
 	hx = wasm_v128_or(hx, k);
 
 	return hx;
@@ -246,9 +249,6 @@ v128_t fmul_1(v128_t dest, v128_t src) {
 	//                    rounding down   no rounding
 	v128_t res_isinf = wasm_v128_bitselect(wasm_f64x2_const(-1.0, -1.0), wasm_f64x2_const(1.0, 1.0), isfinite_a);
 	res = wasm_v128_bitselect(res_isinf, res, isinf);
-
-	printf("c: %f %f\n", wasm_f64x2_extract_lane(c, 0), wasm_f64x2_extract_lane(c, 1));
-	printf("res: %f %f\n", wasm_f64x2_extract_lane(res, 0), wasm_f64x2_extract_lane(res, 1));
 
 	return nextafter_1_nozero(res, c);
 }
