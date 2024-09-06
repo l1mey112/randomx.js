@@ -248,7 +248,7 @@ _Bool __attribute__((optnone)) simd_fmatest(void) {
 
 	__m128d d = _mm_fmadd_pd(a, b, c);
 
-	return d[0] == -0x1.0p-104;
+	return d[1] == -0x1.0p-104;
 }
 
 _Bool __attribute__((optnone)) scalar_fmatest(void) {
