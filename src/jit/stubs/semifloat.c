@@ -17,7 +17,7 @@ static inline v128_t sum_residue(v128_t a, v128_t b, v128_t c) {
 // - no NaNs, no subnormals
 // - source registers: always finite
 // 1. finite - no infinities (register type F, additive instructions)
-// 2.
+// 2. zero   - no zero, no negatives, positive infinity (register type E, multiplicative instructions)
 
 // toward negative infinity
 static inline v128_t nextafter_1_finite(v128_t res, v128_t c) {
@@ -25,7 +25,7 @@ static inline v128_t nextafter_1_finite(v128_t res, v128_t c) {
 	v128_t is_zero = wasm_f64x2_eq(c, wasm_f64x2_const(0.0, 0.0)); // c == 0.0
 
 	v128_t k = wasm_i64x2_add(c, wasm_v128_or(wasm_f64x2_gt(c, wasm_f64x2_const(0.0, 0.0)), wasm_i64x2_const(1, 1)));
-	k = wasm_v128_bitselect(wasm_i32x4_const(0x80000000, 1, 0x80000000, 1), k, is_zero); // is_zero ? +-minsubnormal : k
+	k = wasm_v128_bitselect(wasm_i32x4_const(1, 0x80000000, 1, 0x80000000), k, is_zero); // is_zero ? +-minsubnormal : k
 
 	// to_round ? k : c
 	return wasm_v128_bitselect(k, c, to_round);
@@ -37,7 +37,7 @@ static inline v128_t nextafter_2_finite(v128_t res, v128_t c) {
 	v128_t is_zero = wasm_f64x2_eq(c, wasm_f64x2_const(0.0, 0.0)); // c == 0.0
 
 	v128_t k = wasm_i64x2_add(c, wasm_v128_or(wasm_f64x2_lt(c, wasm_f64x2_const(0.0, 0.0)), wasm_i64x2_const(1, 1)));
-	k = wasm_v128_bitselect(wasm_i32x4_const(0x00000000, 1, 0x00000000, 1), k, is_zero); // is_zero ? +-minsubnormal : k
+	k = wasm_v128_bitselect(wasm_i32x4_const(1, 0x00000000, 1, 0x00000000), k, is_zero); // is_zero ? +-minsubnormal : k
 
 	// to_round ? k : c
 	return wasm_v128_bitselect(k, c, to_round);
@@ -151,6 +151,10 @@ static inline v128_t mul_residue(v128_t a, v128_t b, v128_t c) {
 	return wasm_f64x2_add(resab, fma);
 }
 
+static inline v128_t mul_residue_fma(v128_t a, v128_t b, v128_t c) {
+	return wasm_f64x2_relaxed_madd(wasm_f64x2_neg(c), b, a); // a*b - c
+}
+
 // reference:
 // f64x2            [  mant    exp+s ][  mant    exp+s ]
 // i32x4            [  lo   ][  hi   ][  lo   ][  hi   ]
@@ -195,13 +199,14 @@ static inline v128_t ldexp_reg_e_nozero_noinf(v128_t x, v128_t n) {
 // infinities absolutely unlikely. 0.003414% of all cases
 // TODO: it seems like this branch doesn't do much to influence the performance
 
+WASM_EXPORT("fmul_1")
 v128_t fmul_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
 
 	v128_t expa, expb;
 	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
 	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
-	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb));
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb)); // -expa - expb
 	v128_t res = mul_residue(a_scaled, b_scaled, c_scaled);
 
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
@@ -221,13 +226,14 @@ v128_t fmul_1(v128_t dest, v128_t src) {
 	return nextafter_1_nozero(res, c);
 }
 
+WASM_EXPORT("fmul_2")
 v128_t fmul_2(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
 
 	v128_t expa, expb;
 	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
 	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
-	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb));
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb)); // -expa - expb
 	v128_t res = mul_residue(a_scaled, b_scaled, c_scaled);
 
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
@@ -245,13 +251,14 @@ v128_t fmul_2(v128_t dest, v128_t src) {
 	return nextafter_2_nozero(res, c);
 }
 
+WASM_EXPORT("fmul_3")
 v128_t fmul_3(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
 
 	v128_t expa, expb;
 	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
 	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
-	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb));
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb)); // -expa - expb
 	v128_t res = mul_residue(a_scaled, b_scaled, c_scaled);
 
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
@@ -271,29 +278,208 @@ v128_t fmul_3(v128_t dest, v128_t src) {
 	return nextafter_3_nozero(res, c);
 }
 
+WASM_EXPORT("fmul_fma_1")
 v128_t fmul_fma_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
-	v128_t res = wasm_f64x2_relaxed_nmadd(dest, src, c);
+	v128_t res = mul_residue_fma(dest, src, c);
 	return nextafter_1_nozero(res, c);
 }
 
+WASM_EXPORT("fmul_fma_2")
 v128_t fmul_fma_2(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
-	v128_t res = wasm_f64x2_relaxed_nmadd(dest, src, c);
+	v128_t res = mul_residue_fma(dest, src, c);
 	return nextafter_2_nozero(res, c);
 }
 
+WASM_EXPORT("fmul_fma_3")
 v128_t fmul_fma_3(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
-	v128_t res = wasm_f64x2_relaxed_nmadd(dest, src, c);
+	v128_t res = mul_residue_fma(dest, src, c);
 	return nextafter_3_nozero(res, c);
 }
 
-/* v128_t fdiv_1(v128_t dest, v128_t src) {
+WASM_EXPORT("fdiv_1")
+v128_t fdiv_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_div(dest, src);
 
-	// FAIL: [fdiv fprc(1)] truth(inf, 0x1.efb83b51bc60bp+810) == inf != op(...) == 0x1.fffffffffffffp+1023
+	v128_t expa, expb;
+	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
+	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_add(wasm_i64x2_neg(expa), expb)); // -expa + expb
+	v128_t res = mul_residue(c_scaled, b_scaled, a_scaled);
 
-	// fin / fin = fin
-	// inf / fin = _inf_; round down to the nearest representable number
-} */
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// division by [0.0 < x < 1.0] isn't possible due to operands
+
+		// fin / fin = fin
+		// inf / fin = inf
+		//
+		// res = isinf ? 0.0 : res
+		//               ^^^
+		//           no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+	}
+
+	return nextafter_1_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fdiv_2")
+v128_t fdiv_2(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+
+	v128_t expa, expb;
+	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
+	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_add(wasm_i64x2_neg(expa), expb)); // -expa + expb
+	v128_t res = mul_residue(c_scaled, b_scaled, a_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// fin / fin = fin
+		// inf / fin = inf
+		//
+		// res = isinf ? 0.0 : res
+		//               ^^^
+		//           no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+	}
+
+	return nextafter_2_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fdiv_3")
+v128_t fdiv_3(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+
+	v128_t expa, expb;
+	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
+	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_add(wasm_i64x2_neg(expa), expb)); // -expa + expb
+	v128_t res = mul_residue(c_scaled, b_scaled, a_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// fin / fin = fin
+		// inf / fin = inf
+		//
+		// res = isinf ? 0.0 : res
+		//               ^^^
+		//           no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+	}
+
+	return nextafter_3_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fdiv_fma_1")
+v128_t fdiv_fma_1(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+	v128_t res = mul_residue_fma(c, src, dest);
+	return nextafter_1_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fdiv_fma_2")
+v128_t fdiv_fma_2(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+	v128_t res = mul_residue_fma(c, src, dest);
+	return nextafter_2_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fdiv_fma_3")
+v128_t fdiv_fma_3(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+	v128_t res = mul_residue_fma(c, src, dest);
+	return nextafter_3_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_1")
+v128_t fsqrt_1(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	v128_t expc;
+	v128_t c_scaled = frexp_reg_e_nozero_noinf(c, &expc);
+	v128_t a_scaled = ldexp_reg_e_nozero_noinf(dest, wasm_i64x2_mul(wasm_i64x2_const(-2, -2), expc)); // -2 * expc
+	v128_t res = mul_residue(c_scaled, c_scaled, a_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// sqrt(inf) = inf
+		//
+		// res = isinf ? 0.0 : res
+		//               ^^^
+		//           no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+	}
+
+	return nextafter_1_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_2")
+v128_t fsqrt_2(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	v128_t expc;
+	v128_t c_scaled = frexp_reg_e_nozero_noinf(c, &expc);
+	v128_t a_scaled = ldexp_reg_e_nozero_noinf(dest, wasm_i64x2_mul(wasm_i64x2_const(-2, -2), expc)); // -2 * expc
+	v128_t res = mul_residue(c_scaled, c_scaled, a_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// sqrt(inf) = inf
+		//
+		// res = isinf ? 0.0 : res
+		//               ^^^
+		//           no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+	}
+
+	return nextafter_2_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_3")
+v128_t fsqrt_3(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	v128_t expc;
+	v128_t c_scaled = frexp_reg_e_nozero_noinf(c, &expc);
+	v128_t a_scaled = ldexp_reg_e_nozero_noinf(dest, wasm_i64x2_mul(wasm_i64x2_const(-2, -2), expc)); // -2 * expc
+	v128_t res = mul_residue(c_scaled, c_scaled, a_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// sqrt(inf) = inf
+		//
+		// res = isinf ? 0.0 : res
+		//               ^^^
+		//           no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+	}
+
+	return nextafter_3_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_fma_1")
+v128_t fsqrt_fma_1(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	v128_t res = mul_residue_fma(c, c, dest);
+	return nextafter_1_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_fma_2")
+v128_t fsqrt_fma_2(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	v128_t res = mul_residue_fma(c, c, dest);
+	return nextafter_2_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_fma_3")
+v128_t fsqrt_fma_3(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	v128_t res = mul_residue_fma(c, c, dest);
+	return nextafter_3_nozero(wasm_f64x2_neg(res), c);
+}

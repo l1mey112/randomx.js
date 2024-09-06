@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "freestanding.h"
 #include "wasm_simd128_polyfill.h"
@@ -60,11 +61,39 @@ v128_t fmul_fma_1(v128_t dest, v128_t src);
 v128_t fmul_fma_2(v128_t dest, v128_t src);
 v128_t fmul_fma_3(v128_t dest, v128_t src);
 
+v128_t fdiv_0(v128_t dest, v128_t src) {
+	return wasm_f64x2_div(dest, src);
+}
+
+v128_t fdiv_1(v128_t dest, v128_t src);
+v128_t fdiv_2(v128_t dest, v128_t src);
+v128_t fdiv_3(v128_t dest, v128_t src);
+
+v128_t fdiv_fma_1(v128_t dest, v128_t src);
+v128_t fdiv_fma_2(v128_t dest, v128_t src);
+v128_t fdiv_fma_3(v128_t dest, v128_t src);
+
+v128_t fsqrt_0(v128_t dest) {
+	return wasm_f64x2_sqrt(dest);
+}
+
+v128_t fsqrt_1(v128_t dest);
+v128_t fsqrt_2(v128_t dest);
+v128_t fsqrt_3(v128_t dest);
+
+v128_t fsqrt_fma_1(v128_t dest);
+v128_t fsqrt_fma_2(v128_t dest);
+v128_t fsqrt_fma_3(v128_t dest);
+
 static finst_t instructions[] = {
-	//{"fadd", FDEST_F, FSRC_A | FSRC_R, {fadd_0, fadd_1, fadd_2, fadd_3}},
-	//{"fsub", FDEST_F, FSRC_A | FSRC_R, {fsub_0, fsub_1, fsub_2, fsub_3}},
+	{"fadd", FDEST_F, FSRC_A | FSRC_R, {fadd_0, fadd_1, fadd_2, fadd_3}},
+	{"fsub", FDEST_F, FSRC_A | FSRC_R, {fsub_0, fsub_1, fsub_2, fsub_3}},
 	{"fmul", FDEST_E, FSRC_A, {fmul_0, fmul_1, fmul_2, fmul_3}},
 	{"fmul (fma)", FDEST_E, FSRC_A, {fmul_0, fmul_fma_1, fmul_fma_2, fmul_fma_3}},
+	{"fdiv", FDEST_E, FSRC_R, {fdiv_0, fdiv_1, fdiv_2, fdiv_3}},
+	{"fdiv (fma)", FDEST_E, FSRC_R, {fdiv_0, fdiv_fma_1, fdiv_fma_2, fdiv_fma_3}},
+	{"fsqrt", FDEST_E, 0, {(void*)fsqrt_0, (void*)fsqrt_1, (void*)fsqrt_2, (void*)fsqrt_3}},
+	{"fsqrt (fma)", FDEST_E, 0, {(void*)fsqrt_0, (void*)fsqrt_fma_1, (void*)fsqrt_fma_2, (void*)fsqrt_fma_3}},
 };
 
 // PCG32
@@ -89,7 +118,7 @@ double uniform(double lo, double hi) {
 	double uni = (double)(rv >> (64 - 53)) * 0x1p-53; // [0,1)
 
 	if (isinf(hi)) {
-		hi = 0x1.fffffffffffffp990; // something pretty big
+		hi = 0x1.fffffffffffffp100;
 	}
 
 	return lo + (hi - lo) * uni;
@@ -106,6 +135,7 @@ struct running_avg_t {
 	unsigned count;
 };
 
+// TODO: i should probably be removing statistical outliers
 static void running_avg_update(running_avg_t *avg, double value) {
 	if (value < 0.0) {
 		return;
@@ -116,7 +146,7 @@ static void running_avg_update(running_avg_t *avg, double value) {
 	avg->avg = a * value + b * avg->avg;
 }
 
-_Bool test(finst_t *inst, unsigned samples) {
+bool test(finst_t *inst, unsigned samples) {
 	const int fprc_env[] = {
 		FE_TONEAREST,
 		FE_DOWNWARD,
@@ -137,6 +167,10 @@ _Bool test(finst_t *inst, unsigned samples) {
 		running_avg_update(&running_avg[v], ncycles < 0 ? 0 : ncycles); \
 	} while (0)
 
+	// boundary conditions
+	unsigned INFINITY_COUNT = (samples / 100) | 2;
+	unsigned bound_idx = 0;
+
 	for (unsigned i = 0; i < samples; i++) {
 		v128_t dest, src, truth, result;
 
@@ -145,7 +179,15 @@ _Bool test(finst_t *inst, unsigned samples) {
 			dest = uniform128(-3.0e+14, 3.0e+14);
 			break;
 		case FDEST_E:
-			dest = uniform128(1.7e-77, INFINITY);
+			if (bound_idx < INFINITY_COUNT / 2) {
+				dest = wasm_f64x2_const(INFINITY, INFINITY);
+				bound_idx++;
+			} else if (bound_idx < INFINITY_COUNT) {
+				dest = wasm_f64x2_const(0x1.fffffffffffffp1023, 0x1.fffffffffffffp1023);
+				bound_idx++;
+			} else {
+				dest = uniform128(1.7e-77, INFINITY);
+			}
 			break;
 		}
 
@@ -204,25 +246,65 @@ _Bool test(finst_t *inst, unsigned samples) {
 #undef FAIL
 #undef TIMEIT
 
-	_Bool failed = 0;
+	bool failed = false;
 
 	printf("%s:\n", inst->desc);
 	for (int v = 0; v < 4; v++) {
 		if (v == 0) {
 			printf("  fprc(%d): %uclks\n", v, (unsigned)running_avg[v].avg);
 		} else {
-			printf("  fprc(%d): %uclks [%d/%d] x%u overhead\n", v, (unsigned)running_avg[v].avg, complete[v], samples * 2, (unsigned)round(running_avg[v].avg / running_avg[0].avg));
-		}
+			if (complete[v] != samples * 2) {
+				failed = true;
+			}
 
-		if (complete[v] != samples * 2) {
-			failed = 1;
+			printf("  fprc(%d): %uclks [%d/%d] x%u overhead\n", v, (unsigned)running_avg[v].avg, complete[v], samples * 2, (unsigned)round(running_avg[v].avg / running_avg[0].avg));
 		}
 	}
 
 	return failed;
 }
 
-/* _Bool __attribute__((optnone)) simd_fmatest(void) {
+/* void boundary_conditions() {
+	fesetround(FE_TONEAREST);
+	printf("fprc(0): inf * fin = %a\n", INFINITY * 5.5);
+	fesetround(FE_DOWNWARD);
+	printf("fprc(1): inf * fin = %a\n", INFINITY * 5.5);
+	fesetround(FE_UPWARD);
+	printf("fprc(2): inf * fin = %a\n", INFINITY * 5.5);
+	fesetround(FE_TOWARDZERO);
+	printf("fprc(3): inf * fin = %a\n", INFINITY * 5.5);
+
+	fesetround(FE_TONEAREST);
+	printf("fprc(0): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
+	fesetround(FE_DOWNWARD);
+	printf("fprc(1): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
+	fesetround(FE_UPWARD);
+	printf("fprc(2): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
+	fesetround(FE_TOWARDZERO);
+	printf("fprc(3): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
+
+	fesetround(FE_TONEAREST);
+	printf("fprc(0): inf^0.5 = %a\n", sqrt(INFINITY));
+	fesetround(FE_DOWNWARD);
+	printf("fprc(1): inf^0.5 = %a\n", sqrt(INFINITY));
+	fesetround(FE_UPWARD);
+	printf("fprc(2): inf^0.5 = %a\n", sqrt(INFINITY));
+	fesetround(FE_TOWARDZERO);
+	printf("fprc(3): inf^0.5 = %a\n", sqrt(INFINITY));
+
+	fesetround(FE_TONEAREST);
+	printf("fprc(0): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
+	fesetround(FE_DOWNWARD);
+	printf("fprc(1): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
+	fesetround(FE_UPWARD);
+	printf("fprc(2): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
+	fesetround(FE_TOWARDZERO);
+	printf("fprc(3): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
+
+	fesetround(FE_TONEAREST);
+} */
+
+/* bool simd_fmatest(void) {
 	v128_t a = wasm_f64x2_const(0x1.0000000000001p+0, 0.0);
 	v128_t b = wasm_f64x2_const(0x1.ffffffffffffep-1, 0.0);
 	v128_t c = wasm_f64x2_const(-1.0, 0.0);
@@ -231,17 +313,12 @@ _Bool test(finst_t *inst, unsigned samples) {
 	v128_t d = wasm_f64x2_relaxed_madd(a, b, c);
 	double d0 = wasm_f64x2_extract_lane(d, 0);
 
-	// without disabling optimisations, the compiler will optimise this to:
-	// 0000000000001e90 <simd_fmatest>:
-	//     1e90:       31 c0                   xor    %eax,%eax
-	//     1e92:       c3                      ret
-
 	return d0 == -0x1.0p-104;
 } */
 
 #include <immintrin.h>
 
-_Bool __attribute__((optnone)) simd_fmatest(void) {
+bool simd_fmatest(void) {
 	__m128d a = _mm_set_pd(0x1.0000000000001p+0, 0.0);
 	__m128d b = _mm_set_pd(0x1.ffffffffffffep-1, 0.0);
 	__m128d c = _mm_set_pd(-1.0, 0.0);
@@ -251,7 +328,7 @@ _Bool __attribute__((optnone)) simd_fmatest(void) {
 	return d[1] == -0x1.0p-104;
 }
 
-_Bool __attribute__((optnone)) scalar_fmatest(void) {
+bool scalar_fmatest(void) {
 	double a = 0x1.0000000000001p+0;
 	double b = 0x1.ffffffffffffep-1;
 	double c = -1.0;
@@ -262,13 +339,15 @@ _Bool __attribute__((optnone)) scalar_fmatest(void) {
 }
 
 int main() {
-	_Bool failed = 0;
+	bool failed = false;
 
 	assert(scalar_fmatest());
 	assert(simd_fmatest());
+
+	// boundary_conditions();
 	
 	for (int i = 0; i < (int)sizeof(instructions) / (int)sizeof(instructions[0]); i++) {
-		failed |= test(&instructions[i], 10);
+		failed |= test(&instructions[i], 5000);
 	}
 
 	return failed;

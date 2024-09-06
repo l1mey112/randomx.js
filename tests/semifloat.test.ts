@@ -1,7 +1,8 @@
 import { test, expect } from 'bun:test'
-import { argon2fill } from './harness'
 import { $ } from 'bun'
 
 test('semifloat', async () => {
-	await $`${import.meta.dirname}/semifloat/semifloat`
+	const p = await $`${import.meta.dirname}/semifloat/semifloat`.nothrow()
+
+	expect(p.exitCode).toBe(0)
 })

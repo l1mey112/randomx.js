@@ -9,7 +9,7 @@ H_SOURCES += $(JIT_STUBS_H_SOURCES)
 PRINTF_C_SOURCES := $(shell find src/printf -type f -name '*.c')
 BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SOURCES)
 ARGON2FILL_C_SOURCES := $(shell find src/argon2fill -type f -name '*.c') $(PRINTF_C_SOURCES) $(BLAKE2B_C_SOURCES)
-JIT_C_SOURCES := $(shell find src/jit -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES)
+JIT_C_SOURCES := $(shell find src/jit -maxdepth 1 -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES)
 AES_C_SOURCES := $(shell find src/aes -type f -name '*.c')
 
 DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(ARGON2FILL_C_SOURCES))
@@ -35,12 +35,12 @@ clean:
 include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
 
-tests/semifloat/semifloat: tests/semifloat/harness.c src/jit/stubs/semifloat.c
-	clang -march=native $(UFLAGS) -lm -O3 -o $@ \
-		tests/semifloat/harness.c src/jit/stubs/semifloat.c
+tests/semifloat/semifloat: tests/semifloat/semifloat_test.c src/jit/stubs/semifloat.c
+	clang -march=native -ffp-model=strict $(UFLAGS) -lm -O3 -o $@ \
+		tests/semifloat/semifloat_test.c src/jit/stubs/semifloat.c
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
-	clang -O3 $(CFLAGS) $(LDFLAGS) -o $@ $<
+	clang -O3 $(CFLAGS) -mrelaxed-simd $(LDFLAGS) -o $@ $<
 	wasm-opt -all -O4 -Oz $@ -o $@
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
 	./stubgen.ts $< > $@
