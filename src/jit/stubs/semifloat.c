@@ -196,6 +196,9 @@ static inline v128_t ldexp_reg_e_nozero_noinf(v128_t x, v128_t n) {
 	return hx;
 }
 
+// infinities absolutely unlikely. 0.003414% of all cases
+// TODO: it seems like this branch doesn't do much to influence the performance
+
 v128_t fmul_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
 
@@ -207,10 +210,7 @@ v128_t fmul_1(v128_t dest, v128_t src) {
 
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
 
-	// infinities absolutely unlikely. 0.003414% of all cases
-	// TODO: it seems like this branch doesn't do much to influence the performance
 	if (unlikely(wasm_v128_any_true(isinf))) {
-		// do not check for finite on `b` as it is not needed
 		v128_t isfinite_a = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
 		// fin * fin = _inf_; round down to the nearest representable number
 		// inf * fin = inf
@@ -261,7 +261,6 @@ v128_t fmul_3(v128_t dest, v128_t src) {
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
 
 	if (unlikely(wasm_v128_any_true(isinf))) {
-		// do not check for finite on `b` as it is not needed
 		v128_t isfinite_a = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
 		// fin * fin = _inf_; round down to the nearest representable number
 		// inf * fin = inf
@@ -274,4 +273,18 @@ v128_t fmul_3(v128_t dest, v128_t src) {
 	}
 
 	return nextafter_3_nozero(res, c);
+}
+
+/* v128_t fmul_fma_1(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_mul(dest, src);
+	wasm_f64x2_fma(simde_v128_t a, simde_v128_t b, simde_v128_t c)
+} */
+
+v128_t fdiv_1(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+
+	// FAIL: [fdiv fprc(1)] truth(inf, 0x1.efb83b51bc60bp+810) == inf != op(...) == 0x1.fffffffffffffp+1023
+
+	// fin / fin = fin
+	// inf / fin = _inf_; round down to the nearest representable number
 }
