@@ -45,7 +45,7 @@ static inline v128_t nextafter_2_finite(v128_t res, v128_t c) {
 
 // toward zero
 static inline v128_t nextafter_3_finite(v128_t res, v128_t c) {
-	// if (res > 0.0 && c < 0.0) || (res < 0.0 && c > 0.0)
+	// if ((res > 0.0 && c < 0.0) || (res < 0.0 && c > 0.0))
 	v128_t to_round = wasm_v128_or(
 		wasm_v128_and(wasm_f64x2_gt(res, wasm_f64x2_const(0.0, 0.0)), wasm_f64x2_lt(c, wasm_f64x2_const(0.0, 0.0))),
 		wasm_v128_and(wasm_f64x2_lt(res, wasm_f64x2_const(0.0, 0.0)), wasm_f64x2_gt(c, wasm_f64x2_const(0.0, 0.0)))
@@ -156,7 +156,6 @@ static inline v128_t mul_residue(v128_t a, v128_t b, v128_t c) {
 }
 
 // reference:
-
 // f64x2            [  mant    exp+s ][  mant    exp+s ]
 // i32x4            [  lo   ][  hi   ][  lo   ][  hi   ]
 // wasm_i32x4_const(         ,        ,        ,        )
@@ -197,33 +196,6 @@ static inline v128_t ldexp_reg_e_nozero_noinf(v128_t x, v128_t n) {
 	return hx;
 }
 
-/* double fmul_1(double a, double b) {
-	double c = a * b;
-
-	int expa, expb;
-	double a_scaled = frexp_reg_e_nozero_noinf(a, &expa);
-	double b_scaled = frexp_reg_e_nozero_noinf(b, &expb);
-	double c_scaled = ldexp_reg_e_nozero_noinf(c, -expa - expb);
-	double res = mul_residue(a_scaled, b_scaled, c_scaled);
-	
-	if (!isfinite(c)) {
-		// fin * fin = _inf_; round down to the nearest representable number
-		if (isfinite(a) && isfinite(b)) {
-			res = -1.0; // rounding down
-		} else {
-			// inf * inf = inf
-			res = 0.0; // no rounding
-		}
-	}
-
-	if (res < 0.0) {
-		fmul_1_taken++;
-		return nextafter_1_reg_e(c);
-	}
-
-	return c;
-} */
-
 v128_t fmul_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_mul(dest, src);
 
@@ -236,7 +208,7 @@ v128_t fmul_1(v128_t dest, v128_t src) {
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
 
 	// infinities absolutely unlikely. 0.003414% of all cases
-	// TODO: there is a possibility that gating this behind a branch will be faster
+	// TODO: it seems like this branch doesn't do much to influence the performance
 	if (unlikely(wasm_v128_any_true(isinf))) {
 		// do not check for finite on `b` as it is not needed
 		v128_t isfinite_a = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
@@ -253,13 +225,53 @@ v128_t fmul_1(v128_t dest, v128_t src) {
 	return nextafter_1_nozero(res, c);
 }
 
-// apparently for rounding up with [1, inf) nearest ties to even is equivalent??
-// UPDATE:  fprc(2): 6clks [19999/20000] x0 overhead
-//          FAIL: [fmul fprc(2)] truth(0x1.f7ed5b2af7643p-256, 0x1.80748f83f0b63p+30) == 0x1.7a64bd6788632p-225 != op(...) == 0x1.7a64bd6788631p-225
 v128_t fmul_2(v128_t dest, v128_t src) {
-	return wasm_f64x2_mul(dest, src);
+	v128_t c = wasm_f64x2_mul(dest, src);
+
+	v128_t expa, expb;
+	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
+	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb));
+	v128_t res = mul_residue(a_scaled, b_scaled, c_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// fin * fin = inf
+		// inf * inf = inf
+		//
+		// res = isinf ? -1.0 : res
+		//               ^^^^
+		//            no rounding
+		res = wasm_v128_bitselect(wasm_f64x2_const(-1.0, -1.0), res, isinf);
+	}
+
+	return nextafter_2_nozero(res, c);
 }
 
 v128_t fmul_3(v128_t dest, v128_t src) {
-	return wasm_f64x2_mul(dest, src);
+	v128_t c = wasm_f64x2_mul(dest, src);
+
+	v128_t expa, expb;
+	v128_t a_scaled = frexp_reg_e_nozero_noinf(dest, &expa);
+	v128_t b_scaled = frexp_reg_e_nozero_noinf(src, &expb);
+	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb));
+	v128_t res = mul_residue(a_scaled, b_scaled, c_scaled);
+
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// do not check for finite on `b` as it is not needed
+		v128_t isfinite_a = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
+		// fin * fin = _inf_; round down to the nearest representable number
+		// inf * fin = inf
+		//
+		// res = isinf ? (isfinite_a ? -1.0 : 0.0) : res
+		//                             ^^^^   ^^^
+		//                    rounding down   no rounding
+		v128_t res_isinf = wasm_v128_bitselect(wasm_f64x2_const(-1.0, -1.0), wasm_f64x2_const(0.0, 0.0), isfinite_a);
+		res = wasm_v128_bitselect(res_isinf, res, isinf);
+	}
+
+	return nextafter_3_nozero(res, c);
 }
