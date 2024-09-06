@@ -83,7 +83,7 @@ double uniform(double lo, double hi) {
 	double uni = (double)(rv >> (64 - 53)) * 0x1p-53; // [0,1)
 
 	if (isinf(hi)) {
-		hi = 0x1.fffffffffffffp500; // something pretty big
+		hi = 0x1.fffffffffffffp991; // something pretty big
 	}
 
 	return lo + (hi - lo) * uni;
@@ -220,7 +220,7 @@ int main() {
 	_Bool failed = 0;
 	
 	for (int i = 0; i < (int)sizeof(instructions) / (int)sizeof(instructions[0]); i++) {
-		failed |= test(&instructions[i], 100000);
+		failed |= test(&instructions[i], 1000000);
 	}
 
 	return failed;

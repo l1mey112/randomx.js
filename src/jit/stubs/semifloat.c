@@ -233,22 +233,22 @@ v128_t fmul_1(v128_t dest, v128_t src) {
 	v128_t c_scaled = ldexp_reg_e_nozero_noinf(c, wasm_i64x2_sub(wasm_i64x2_neg(expa), expb));
 	v128_t res = mul_residue(a_scaled, b_scaled, c_scaled);
 
+	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
+
 	// infinities absolutely unlikely. 0.003414% of all cases
 	// TODO: there is a possibility that gating this behind a branch will be faster
-
-	// check isinf (entire exponent set)
-	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
-	v128_t isfinite_a = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
-	// do not check for finite on `b` as it is not needed
-
-	// fin * fin = _inf_; round down to the nearest representable number
-	// inf * fin = inf
-	//
-	// res = isinf ? (isfinite_a ? -1.0 : 1.0) : res
-	//                             ^^^^   ^^^
-	//                    rounding down   no rounding
-	v128_t res_isinf = wasm_v128_bitselect(wasm_f64x2_const(-1.0, -1.0), wasm_f64x2_const(1.0, 1.0), isfinite_a);
-	res = wasm_v128_bitselect(res_isinf, res, isinf);
+	if (unlikely(wasm_v128_any_true(isinf))) {
+		// do not check for finite on `b` as it is not needed
+		v128_t isfinite_a = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
+		// fin * fin = _inf_; round down to the nearest representable number
+		// inf * fin = inf
+		//
+		// res = isinf ? (isfinite_a ? -1.0 : 1.0) : res
+		//                             ^^^^   ^^^
+		//                    rounding down   no rounding
+		v128_t res_isinf = wasm_v128_bitselect(wasm_f64x2_const(-1.0, -1.0), wasm_f64x2_const(1.0, 1.0), isfinite_a);
+		res = wasm_v128_bitselect(res_isinf, res, isinf);
+	}
 
 	return nextafter_1_nozero(res, c);
 }
