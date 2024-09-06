@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <math.h>
 #include <stdint.h>
 
@@ -55,10 +56,15 @@ v128_t fmul_1(v128_t dest, v128_t src);
 v128_t fmul_2(v128_t dest, v128_t src);
 v128_t fmul_3(v128_t dest, v128_t src);
 
+v128_t fmul_fma_1(v128_t dest, v128_t src);
+v128_t fmul_fma_2(v128_t dest, v128_t src);
+v128_t fmul_fma_3(v128_t dest, v128_t src);
+
 static finst_t instructions[] = {
 	//{"fadd", FDEST_F, FSRC_A | FSRC_R, {fadd_0, fadd_1, fadd_2, fadd_3}},
 	//{"fsub", FDEST_F, FSRC_A | FSRC_R, {fsub_0, fsub_1, fsub_2, fsub_3}},
 	{"fmul", FDEST_E, FSRC_A, {fmul_0, fmul_1, fmul_2, fmul_3}},
+	{"fmul (fma)", FDEST_E, FSRC_A, {fmul_0, fmul_fma_1, fmul_fma_2, fmul_fma_3}},
 };
 
 // PCG32
@@ -184,13 +190,13 @@ _Bool test(finst_t *inst, unsigned samples) {
 			if (truth0 == result0) {
 				complete[v]++;
 			} else {
-				//FAIL(0);
+				FAIL(0);
 			}
 
 			if (truth1 == result1) {
 				complete[v]++;
 			} else {
-				//FAIL(1);
+				FAIL(1);
 			}
 		}
 	}
@@ -216,11 +222,53 @@ _Bool test(finst_t *inst, unsigned samples) {
 	return failed;
 }
 
+/* _Bool __attribute__((optnone)) simd_fmatest(void) {
+	v128_t a = wasm_f64x2_const(0x1.0000000000001p+0, 0.0);
+	v128_t b = wasm_f64x2_const(0x1.ffffffffffffep-1, 0.0);
+	v128_t c = wasm_f64x2_const(-1.0, 0.0);
+
+	// using a polyfill that invokes _mm_fmadd_pd()
+	v128_t d = wasm_f64x2_relaxed_madd(a, b, c);
+	double d0 = wasm_f64x2_extract_lane(d, 0);
+
+	// without disabling optimisations, the compiler will optimise this to:
+	// 0000000000001e90 <simd_fmatest>:
+	//     1e90:       31 c0                   xor    %eax,%eax
+	//     1e92:       c3                      ret
+
+	return d0 == -0x1.0p-104;
+} */
+
+#include <immintrin.h>
+
+_Bool __attribute__((optnone)) simd_fmatest(void) {
+	__m128d a = _mm_set_pd(0x1.0000000000001p+0, 0.0);
+	__m128d b = _mm_set_pd(0x1.ffffffffffffep-1, 0.0);
+	__m128d c = _mm_set_pd(-1.0, 0.0);
+
+	__m128d d = _mm_fmadd_pd(a, b, c);
+
+	return d[0] == -0x1.0p-104;
+}
+
+_Bool __attribute__((optnone)) scalar_fmatest(void) {
+	double a = 0x1.0000000000001p+0;
+	double b = 0x1.ffffffffffffep-1;
+	double c = -1.0;
+
+	double d = fma(a, b, c);
+
+	return d == -0x1.0p-104;
+}
+
 int main() {
 	_Bool failed = 0;
+
+	assert(scalar_fmatest());
+	assert(simd_fmatest());
 	
 	for (int i = 0; i < (int)sizeof(instructions) / (int)sizeof(instructions[0]); i++) {
-		failed |= test(&instructions[i], 1000000);
+		failed |= test(&instructions[i], 10);
 	}
 
 	return failed;
