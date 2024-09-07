@@ -309,15 +309,15 @@ v128_t fdiv_1(v128_t dest, v128_t src) {
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
 
 	if (unlikely(wasm_v128_any_true(isinf))) {
-		// division by [0.0 < x < 1.0] isn't possible due to operands
-
-		// fin / fin = fin
+		v128_t isfinite_b = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
+		// fin / fin = _inf_; round down to the nearest representable number
 		// inf / fin = inf
 		//
-		// res = isinf ? 0.0 : res
-		//               ^^^
-		//           no rounding
-		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+		// res = isinf ? (isfinite_b ? 1.0 : 0.0) : res
+		//                             ^^^   ^^^
+		//                   rounding down   no rounding
+		v128_t res_isinf = wasm_v128_bitselect(wasm_f64x2_const(1.0, 1.0), wasm_f64x2_const(0.0, 0.0), isfinite_b);
+		res = wasm_v128_bitselect(res_isinf, res, isinf);
 	}
 
 	return nextafter_1_nozero(wasm_f64x2_neg(res), c);
@@ -361,13 +361,15 @@ v128_t fdiv_3(v128_t dest, v128_t src) {
 	v128_t isinf = wasm_f64x2_eq(c, wasm_f64x2_const(INFINITY, INFINITY));
 
 	if (unlikely(wasm_v128_any_true(isinf))) {
-		// fin / fin = fin
+		v128_t isfinite_b = wasm_f64x2_ne(dest, wasm_f64x2_const(INFINITY, INFINITY));
+		// fin / fin = _inf_; round down to the nearest representable number
 		// inf / fin = inf
 		//
-		// res = isinf ? 0.0 : res
-		//               ^^^
-		//           no rounding
-		res = wasm_v128_bitselect(wasm_f64x2_const(0.0, 0.0), res, isinf);
+		// res = isinf ? (isfinite_b ? 1.0 : 0.0) : res
+		//                             ^^^   ^^^
+		//                   rounding down   no rounding
+		v128_t res_isinf = wasm_v128_bitselect(wasm_f64x2_const(1.0, 1.0), wasm_f64x2_const(0.0, 0.0), isfinite_b);
+		res = wasm_v128_bitselect(res_isinf, res, isinf);
 	}
 
 	return nextafter_3_nozero(wasm_f64x2_neg(res), c);

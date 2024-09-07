@@ -285,7 +285,7 @@ bool mul_boundary() {
 
 	TEST(FE_DOWNWARD);
 	if (mul == 0x1.fffffffffffffp1023) {
-		printf("fprc(1): fin * fin == _inf_ (0x1.fffffffffffffp1023)\n");
+		printf("fprc(1): fin * fin == _inf_ (0x1.fffffffffffffp+1023)\n");
 	} else {
 		failed = true;
 		printf("FAIL: fprc(1): fin * fin != _inf_ == %a\n", mul);
@@ -301,7 +301,7 @@ bool mul_boundary() {
 
 	TEST(FE_TOWARDZERO);
 	if (mul == 0x1.fffffffffffffp1023) {
-		printf("fprc(3): fin * fin == _inf_ (0x1.fffffffffffffp1023)\n");
+		printf("fprc(3): fin * fin == _inf_ (0x1.fffffffffffffp+1023)\n");
 	} else {
 		failed = true;
 		printf("FAIL: fprc(3): fin * fin != _inf_ == %a\n", mul);
@@ -400,12 +400,12 @@ void TESTV(int op, double x0, double x1, double y0, double y1, double z0, double
 	double result1 = wasm_f64x2_extract_lane(result, 1);
 
 	if (result0 != z0) {
-		printf("FAIL: %s(%a, %a, %a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, y0, y1, result0, z0);
+		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, y0, result0, z0);
 		fp_heap_failed = true;
 	}
 
 	if (result1 != z1) {
-		printf("FAIL: %s(%a, %a, %a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, y0, y1, result1, z1);
+		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x1, y1, result1, z1);
 		fp_heap_failed = true;
 	}
 }
