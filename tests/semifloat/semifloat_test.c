@@ -1,7 +1,8 @@
 #include <assert.h>
+#include <fenv.h>
 #include <math.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "freestanding.h"
 #include "wasm_simd128_polyfill.h"
@@ -92,8 +93,8 @@ static finst_t instructions[] = {
 	{"fmul (fma)", FDEST_E, FSRC_A, {fmul_0, fmul_fma_1, fmul_fma_2, fmul_fma_3}},
 	{"fdiv", FDEST_E, FSRC_R, {fdiv_0, fdiv_1, fdiv_2, fdiv_3}},
 	{"fdiv (fma)", FDEST_E, FSRC_R, {fdiv_0, fdiv_fma_1, fdiv_fma_2, fdiv_fma_3}},
-	{"fsqrt", FDEST_E, 0, {(void*)fsqrt_0, (void*)fsqrt_1, (void*)fsqrt_2, (void*)fsqrt_3}},
-	{"fsqrt (fma)", FDEST_E, 0, {(void*)fsqrt_0, (void*)fsqrt_fma_1, (void*)fsqrt_fma_2, (void*)fsqrt_fma_3}},
+	{"fsqrt", FDEST_E, 0, {(void *)fsqrt_0, (void *)fsqrt_1, (void *)fsqrt_2, (void *)fsqrt_3}},
+	{"fsqrt (fma)", FDEST_E, 0, {(void *)fsqrt_0, (void *)fsqrt_fma_1, (void *)fsqrt_fma_2, (void *)fsqrt_fma_3}},
 };
 
 // PCG32
@@ -264,61 +265,201 @@ bool test(finst_t *inst, unsigned samples) {
 	return failed;
 }
 
-/* void boundary_conditions() {
-	fesetround(FE_TONEAREST);
-	printf("fprc(0): inf * fin = %a\n", INFINITY * 5.5);
-	fesetround(FE_DOWNWARD);
-	printf("fprc(1): inf * fin = %a\n", INFINITY * 5.5);
-	fesetround(FE_UPWARD);
-	printf("fprc(2): inf * fin = %a\n", INFINITY * 5.5);
-	fesetround(FE_TOWARDZERO);
-	printf("fprc(3): inf * fin = %a\n", INFINITY * 5.5);
+bool mul_boundary() {
+	double mul;
+	bool failed = false;
+
+#define TEST(kind)                                             \
+	do {                                                       \
+		fesetround(kind);                                      \
+		mul = 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023; \
+	} while (0)
+
+	TEST(FE_TONEAREST);
+	if (mul == INFINITY) {
+		printf("fprc(0): fin * fin == inf   (inf)\n");
+	} else {
+		failed = true;
+		printf("FAIL: fprc(0): fin * fin != inf == %a\n", mul);
+	}
+
+	TEST(FE_DOWNWARD);
+	if (mul == 0x1.fffffffffffffp1023) {
+		printf("fprc(1): fin * fin == _inf_ (0x1.fffffffffffffp1023)\n");
+	} else {
+		failed = true;
+		printf("FAIL: fprc(1): fin * fin != _inf_ == %a\n", mul);
+	}
+
+	TEST(FE_UPWARD);
+	if (mul == INFINITY) {
+		printf("fprc(2): fin * fin == inf   (inf)\n");
+	} else {
+		failed = true;
+		printf("FAIL: fprc(2): fin * fin != inf == %a\n", mul);
+	}
+
+	TEST(FE_TOWARDZERO);
+	if (mul == 0x1.fffffffffffffp1023) {
+		printf("fprc(3): fin * fin == _inf_ (0x1.fffffffffffffp1023)\n");
+	} else {
+		failed = true;
+		printf("FAIL: fprc(3): fin * fin != _inf_ == %a\n", mul);
+	}
 
 	fesetround(FE_TONEAREST);
-	printf("fprc(0): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
-	fesetround(FE_DOWNWARD);
-	printf("fprc(1): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
-	fesetround(FE_UPWARD);
-	printf("fprc(2): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
-	fesetround(FE_TOWARDZERO);
-	printf("fprc(3): inf / fin = %a\n", INFINITY / 0x1.ee86b53b8c8a7p+100);
 
-	fesetround(FE_TONEAREST);
-	printf("fprc(0): inf^0.5 = %a\n", sqrt(INFINITY));
-	fesetround(FE_DOWNWARD);
-	printf("fprc(1): inf^0.5 = %a\n", sqrt(INFINITY));
-	fesetround(FE_UPWARD);
-	printf("fprc(2): inf^0.5 = %a\n", sqrt(INFINITY));
-	fesetround(FE_TOWARDZERO);
-	printf("fprc(3): inf^0.5 = %a\n", sqrt(INFINITY));
+	return failed;
+}
 
-	fesetround(FE_TONEAREST);
-	printf("fprc(0): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
-	fesetround(FE_DOWNWARD);
-	printf("fprc(1): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
-	fesetround(FE_UPWARD);
-	printf("fprc(2): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
-	fesetround(FE_TOWARDZERO);
-	printf("fprc(3): fin * fin = %a\n", 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023);
+#include "the_randomx_fp_heap.h"
 
-	fesetround(FE_TONEAREST);
-} */
+static bool fp_heap_failed = false;
+static uint64_t fp_heap_v = 0;
+static uint64_t fp_heap_vu = 0;
 
-/* bool simd_fmatest(void) {
-	v128_t a = wasm_f64x2_const(0x1.0000000000001p+0, 0.0);
-	v128_t b = wasm_f64x2_const(0x1.ffffffffffffep-1, 0.0);
-	v128_t c = wasm_f64x2_const(-1.0, 0.0);
+static const char *fp_heap_opstr[FCOUNT] = {
+	[FADD_0] = "fadd_0",
+	[FADD_1] = "fadd_1",
+	[FADD_2] = "fadd_2",
+	[FADD_3] = "fadd_3",
+	[FSUB_0] = "fsub_0",
+	[FSUB_1] = "fsub_1",
+	[FSUB_2] = "fsub_2",
+	[FSUB_3] = "fsub_3",
+	[FMUL_0] = "fmul_0",
+	[FMUL_1] = "fmul_1",
+	[FMUL_2] = "fmul_2",
+	[FMUL_3] = "fmul_3",
+	[FMUL_FMA_1] = "fmul_fma_1",
+	[FMUL_FMA_2] = "fmul_fma_2",
+	[FMUL_FMA_3] = "fmul_fma_3",
+	[FDIV_0] = "fdiv_0",
+	[FDIV_1] = "fdiv_1",
+	[FDIV_2] = "fdiv_2",
+	[FDIV_3] = "fdiv_3",
+	[FDIV_FMA_1] = "fdiv_fma_1",
+	[FDIV_FMA_2] = "fdiv_fma_2",
+	[FDIV_FMA_3] = "fdiv_fma_3",
+	[FSQRT_0] = "fsqrt_0",
+	[FSQRT_1] = "fsqrt_1",
+	[FSQRT_2] = "fsqrt_2",
+	[FSQRT_3] = "fsqrt_3",
+	[FSQRT_FMA_1] = "fsqrt_fma_1",
+	[FSQRT_FMA_2] = "fsqrt_fma_2",
+	[FSQRT_FMA_3] = "fsqrt_fma_3",
+};
 
-	// using a polyfill that invokes _mm_fmadd_pd()
-	v128_t d = wasm_f64x2_relaxed_madd(a, b, c);
-	double d0 = wasm_f64x2_extract_lane(d, 0);
+static running_avg_t fp_heap_running_avg[FCOUNT] = {};
 
-	return d0 == -0x1.0p-104;
-} */
+#define TIMEIT(v, f)                                                    \
+	do {                                                                \
+		uint32_t rdtsc_base = rdtsc_overhead();                         \
+		uint32_t start = rdtsc();                                       \
+		f;                                                              \
+		uint32_t end = rdtsc();                                         \
+		int32_t ncycles = (int32_t)(end - start) - rdtsc_base;          \
+		running_avg_update(&fp_heap_running_avg[v], ncycles < 0 ? 0 : ncycles); \
+	} while (0)
+
+void TESTV(int op, double x0, double x1, double y0, double y1, double z0, double z1) {
+	v128_t v = wasm_f64x2_make(x0, x1);
+	v128_t w = wasm_f64x2_make(y0, y1);
+
+	fp_heap_v++;
+
+	static v128_t (*const opf[])(v128_t, v128_t) = {
+		[FADD_0] = fadd_0,
+		[FADD_1] = fadd_1,
+		[FADD_2] = fadd_2,
+		[FADD_3] = fadd_3,
+		[FSUB_0] = fsub_0,
+		[FSUB_1] = fsub_1,
+		[FSUB_2] = fsub_2,
+		[FSUB_3] = fsub_3,
+		[FMUL_0] = fmul_0,
+		[FMUL_1] = fmul_1,
+		[FMUL_2] = fmul_2,
+		[FMUL_3] = fmul_3,
+		[FMUL_FMA_1] = fmul_fma_1,
+		[FMUL_FMA_2] = fmul_fma_2,
+		[FMUL_FMA_3] = fmul_fma_3,
+		[FDIV_0] = fdiv_0,
+		[FDIV_1] = fdiv_1,
+		[FDIV_2] = fdiv_2,
+		[FDIV_3] = fdiv_3,
+		[FDIV_FMA_1] = fdiv_fma_1,
+		[FDIV_FMA_2] = fdiv_fma_2,
+		[FDIV_FMA_3] = fdiv_fma_3,
+	};
+
+	v128_t result;
+	TIMEIT(op, { result = opf[op](v, w); });
+
+	double result0 = wasm_f64x2_extract_lane(result, 0);
+	double result1 = wasm_f64x2_extract_lane(result, 1);
+
+	if (result0 != z0) {
+		printf("FAIL: %s(%a, %a, %a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, y0, y1, result0, z0);
+		fp_heap_failed = true;
+	}
+
+	if (result1 != z1) {
+		printf("FAIL: %s(%a, %a, %a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, y0, y1, result1, z1);
+		fp_heap_failed = true;
+	}
+}
+
+void TESTVU(int op, double x0, double x1, double z0, double z1) {
+	v128_t v = wasm_f64x2_make(x0, x1);
+
+	fp_heap_vu++;
+
+	static v128_t (*const opf[])(v128_t) = {
+		[FSQRT_0] = fsqrt_0,
+		[FSQRT_1] = fsqrt_1,
+		[FSQRT_2] = fsqrt_2,
+		[FSQRT_3] = fsqrt_3,
+		[FSQRT_FMA_1] = fsqrt_fma_1,
+		[FSQRT_FMA_2] = fsqrt_fma_2,
+		[FSQRT_FMA_3] = fsqrt_fma_3,
+	};
+
+	v128_t result;
+	TIMEIT(op, { result = opf[op](v); });
+
+	double result0 = wasm_f64x2_extract_lane(result, 0);
+	double result1 = wasm_f64x2_extract_lane(result, 1);
+
+	if (result0 != z0) {
+		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, result0, z0);
+		fp_heap_failed = true;
+	}
+
+	if (result1 != z1) {
+		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, result1, z1);
+		fp_heap_failed = true;
+	}
+}
+
+#undef TIMEIT
+
+bool fp_heap() {
+	SAMPLE();
+	printf("FP heap: %lu infix, %lu unary, %lu total\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu);
+	for (int v = 0; v < FCOUNT; v++) {
+		printf("  %11s: %uclks (%u ops)\n", fp_heap_opstr[v], (unsigned)fp_heap_running_avg[v].avg, fp_heap_running_avg[v].count);
+	}
+	return fp_heap_failed;
+}
 
 #include <immintrin.h>
 
-bool simd_fmatest(void) {
+#ifndef __x86_64__
+#error "x86_64 only FP tests, sorry"
+#endif
+
+bool __attribute__((optnone)) simd_fmatest(void) {
 	__m128d a = _mm_set_pd(0x1.0000000000001p+0, 0.0);
 	__m128d b = _mm_set_pd(0x1.ffffffffffffep-1, 0.0);
 	__m128d c = _mm_set_pd(-1.0, 0.0);
@@ -328,7 +469,7 @@ bool simd_fmatest(void) {
 	return d[1] == -0x1.0p-104;
 }
 
-bool scalar_fmatest(void) {
+bool __attribute__((optnone)) scalar_fmatest(void) {
 	double a = 0x1.0000000000001p+0;
 	double b = 0x1.ffffffffffffep-1;
 	double c = -1.0;
@@ -344,11 +485,13 @@ int main() {
 	assert(scalar_fmatest());
 	assert(simd_fmatest());
 
-	// boundary_conditions();
-	
+
 	for (int i = 0; i < (int)sizeof(instructions) / (int)sizeof(instructions[0]); i++) {
 		failed |= test(&instructions[i], 5000);
 	}
+
+	failed |= mul_boundary();
+	failed |= fp_heap();
 
 	return failed;
 }
