@@ -98,6 +98,10 @@ static void running_avg_update(running_avg_t *avg, double value) {
 	if (value < 0.0) {
 		return;
 	}
+	if (value > 75) {
+		// probably some context switch
+		return;
+	}
 	avg->count++;
 	double a = 1.0 / avg->count;
 	double b = 1.0 - a;
@@ -144,116 +148,132 @@ static const char *fp_heap_opstr[FCOUNT] = {
 
 static running_avg_t fp_heap_running_avg[FCOUNT] = {};
 static unsigned fp_heap_passed[FCOUNT] = {};
+static unsigned fp_heap_count[FCOUNT] = {};
 
-// the FP HEAP dataset has been sorted in such a way that calls to the same function appear together
-// this is to minimize the impact of branch mispredictions, as they used to add about an extra 50 cycles
-
-#define TIMEIT(v, f)                                                    \
-	do {                                                                \
-		uint32_t rdtsc_base = rdtsc_overhead();                         \
-		uint32_t start = rdtsc();                                       \
-		f;                                                              \
-		uint32_t end = rdtsc();                                         \
-		int32_t ncycles = (int32_t)(end - start) - rdtsc_base;          \
+#define TIMEIT(v, f)                                                            \
+	do {                                                                        \
+		rdtsc();                                                                \
+		rdtsc();                                                                \
+		rdtsc();                                                                \
+		uint32_t rdtsc_base = rdtsc_overhead();                                 \
+		rdtsc();                                                                \
+		rdtsc();                                                                \
+		uint32_t start = rdtsc();                                               \
+		f;                                                                      \
+		uint32_t end = rdtsc();                                                 \
+		rdtsc();                                                                \
+		rdtsc();                                                                \
+		rdtsc();                                                                \
+		int32_t ncycles = (int32_t)(end - start) - rdtsc_base;                  \
 		running_avg_update(&fp_heap_running_avg[v], ncycles < 0 ? 0 : ncycles); \
 	} while (0)
 
-void TESTV(int op, double x0, double x1, double y0, double y1, double z0, double z1) {
-	v128_t v = wasm_f64x2_make(x0, x1);
-	v128_t w = wasm_f64x2_make(y0, y1);
+#define LANE_V(n, fn, heap)                                                                      \
+	do {                                                                                         \
+		if (result##n != p->z##n) {                                                              \
+			printf("FAIL: %s(%a, %a) == %a != %a\n", #fn, p->x##n, p->y##n, result##n, p->z##n); \
+			fp_heap_failed = true;                                                               \
+		} else {                                                                                 \
+			fp_heap_passed[heap]++;                                                              \
+		}                                                                                        \
+		fp_heap_count[heap]++;                                                                   \
+	} while (0)
 
-	fp_heap_v++;
+#define LANE_VU(n, fn, heap)                                                        \
+	do {                                                                            \
+		if (result##n != p->z##n) {                                                 \
+			printf("FAIL: %s(%a) == %a != %a\n", #fn, p->x##n, result##n, p->z##n); \
+			fp_heap_failed = true;                                                  \
+		} else {                                                                    \
+			fp_heap_passed[heap]++;                                                 \
+		}                                                                           \
+		fp_heap_count[heap]++;                                                      \
+	} while (0)
 
-	static v128_t (*const opft[])(v128_t, v128_t) = {
-		[FADD_0] = fadd_0,
-		[FADD_1] = fadd_1,
-		[FADD_2] = fadd_2,
-		[FADD_3] = fadd_3,
-		[FSUB_0] = fsub_0,
-		[FSUB_1] = fsub_1,
-		[FSUB_2] = fsub_2,
-		[FSUB_3] = fsub_3,
-		[FMUL_0] = fmul_0,
-		[FMUL_1] = fmul_1,
-		[FMUL_2] = fmul_2,
-		[FMUL_3] = fmul_3,
-		[FMUL_FMA_1] = fmul_fma_1,
-		[FMUL_FMA_2] = fmul_fma_2,
-		[FMUL_FMA_3] = fmul_fma_3,
-		[FDIV_0] = fdiv_0,
-		[FDIV_1] = fdiv_1,
-		[FDIV_2] = fdiv_2,
-		[FDIV_3] = fdiv_3,
-		[FDIV_FMA_1] = fdiv_fma_1,
-		[FDIV_FMA_2] = fdiv_fma_2,
-		[FDIV_FMA_3] = fdiv_fma_3,
-	};
+#define ITERATION_COUNT 50000
 
-	v128_t (*opf)(v128_t, v128_t) = opft[op];
-
-	v128_t result;
-	TIMEIT(op, { result = opf(v, w); });
-
-	double result0 = wasm_f64x2_extract_lane(result, 0);
-	double result1 = wasm_f64x2_extract_lane(result, 1);
-
-	if (result0 != z0) {
-		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, y0, result0, z0);
-		fp_heap_failed = true;
-	} else {
-		fp_heap_passed[op]++;
+#define RUNFOR_V(fn, heap)                                                    \
+	p = HEAP_##heap, endp = p + sizeof(HEAP_##heap) / sizeof(HEAP_##heap[0]); \
+	while (p != endp) {                                                       \
+		v128_t v = wasm_f64x2_make(p->x0, p->x1);                             \
+		v128_t w = wasm_f64x2_make(p->y0, p->y1);                             \
+		fp_heap_v++;                                                          \
+		v128_t result = fn(v, w);                                             \
+		double result0 = wasm_f64x2_extract_lane(result, 0);                  \
+		double result1 = wasm_f64x2_extract_lane(result, 1);                  \
+		LANE_V(0, fn, heap);                                                  \
+		LANE_V(1, fn, heap);                                                  \
+		p++;                                                                  \
+	}                                                                         \
+	p = HEAP_##heap, endp = p + sizeof(HEAP_##heap) / sizeof(HEAP_##heap[0]); \
+	for (unsigned c = 0; c < ITERATION_COUNT; c++) {                          \
+		v128_t v = wasm_f64x2_make(p->x0, p->x1);                             \
+		v128_t w = wasm_f64x2_make(p->y0, p->y1);                             \
+		TIMEIT(heap, { fn(v, w); });                                          \
+		if (++p == endp) {                                                    \
+			p = HEAP_##heap;                                                  \
+		}                                                                     \
 	}
 
-	if (result1 != z1) {
-		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x1, y1, result1, z1);
-		fp_heap_failed = true;
-	} else {
-		fp_heap_passed[op]++;
+#define RUNFOR_VU(fn, heap)                                                   \
+	p = HEAP_##heap, endp = p + sizeof(HEAP_##heap) / sizeof(HEAP_##heap[0]); \
+	while (p != endp) {                                                       \
+		v128_t v = wasm_f64x2_make(p->x0, p->x1);                             \
+		fp_heap_vu++;                                                         \
+		v128_t result = fn(v);                                                \
+		double result0 = wasm_f64x2_extract_lane(result, 0);                  \
+		double result1 = wasm_f64x2_extract_lane(result, 1);                  \
+		LANE_VU(0, fn, heap);                                                 \
+		LANE_VU(1, fn, heap);                                                 \
+		p++;                                                                  \
+	}                                                                         \
+	p = HEAP_##heap, endp = p + sizeof(HEAP_##heap) / sizeof(HEAP_##heap[0]); \
+	for (unsigned c = 0; c < ITERATION_COUNT; c++) {                          \
+		v128_t v = wasm_f64x2_make(p->x0, p->x1);                             \
+		TIMEIT(heap, { fn(v); });                                             \
+		if (++p == endp) {                                                    \
+			p = HEAP_##heap;                                                  \
+		}                                                                     \
 	}
-}
-
-void TESTVU(int op, double x0, double x1, double z0, double z1) {
-	v128_t v = wasm_f64x2_make(x0, x1);
-
-	fp_heap_vu++;
-
-	static v128_t (*const opft[])(v128_t) = {
-		[FSQRT_0] = fsqrt_0,
-		[FSQRT_1] = fsqrt_1,
-		[FSQRT_2] = fsqrt_2,
-		[FSQRT_3] = fsqrt_3,
-		[FSQRT_FMA_1] = fsqrt_fma_1,
-		[FSQRT_FMA_2] = fsqrt_fma_2,
-		[FSQRT_FMA_3] = fsqrt_fma_3,
-	};
-
-	v128_t (*opf)(v128_t) = opft[op];
-
-	v128_t result;
-	TIMEIT(op, { result = opf(v); });
-
-	double result0 = wasm_f64x2_extract_lane(result, 0);
-	double result1 = wasm_f64x2_extract_lane(result, 1);
-
-	if (result0 != z0) {
-		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, result0, z0);
-		fp_heap_failed = true;
-	} else {
-		fp_heap_passed[op]++;
-	}
-
-	if (result1 != z1) {
-		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, result1, z1);
-		fp_heap_failed = true;
-	} else {
-		fp_heap_passed[op]++;
-	}
-}
-
-#undef TIMEIT
 
 bool fp_heap() {
-	SAMPLE();
+	{
+		TESTV *p, *endp;
+		RUNFOR_V(fadd_0, FADD_0);
+		RUNFOR_V(fadd_1, FADD_1);
+		RUNFOR_V(fadd_2, FADD_2);
+		RUNFOR_V(fadd_3, FADD_3);
+		RUNFOR_V(fsub_0, FSUB_0);
+		RUNFOR_V(fsub_1, FSUB_1);
+		RUNFOR_V(fsub_2, FSUB_2);
+		RUNFOR_V(fsub_3, FSUB_3);
+		RUNFOR_V(fmul_0, FMUL_0);
+		RUNFOR_V(fmul_1, FMUL_1);
+		RUNFOR_V(fmul_2, FMUL_2);
+		RUNFOR_V(fmul_3, FMUL_3);
+		RUNFOR_V(fmul_fma_1, FMUL_FMA_1);
+		RUNFOR_V(fmul_fma_2, FMUL_FMA_2);
+		RUNFOR_V(fmul_fma_3, FMUL_FMA_3);
+		RUNFOR_V(fdiv_0, FDIV_0);
+		RUNFOR_V(fdiv_1, FDIV_1);
+		RUNFOR_V(fdiv_2, FDIV_2);
+		RUNFOR_V(fdiv_3, FDIV_3);
+		RUNFOR_V(fdiv_fma_1, FDIV_FMA_1);
+		RUNFOR_V(fdiv_fma_2, FDIV_FMA_2);
+		RUNFOR_V(fdiv_fma_3, FDIV_FMA_3);
+	}
+
+	{
+		TESTVU *p, *endp;
+		RUNFOR_VU(fsqrt_0, FSQRT_0);
+		RUNFOR_VU(fsqrt_1, FSQRT_1);
+		RUNFOR_VU(fsqrt_2, FSQRT_2);
+		RUNFOR_VU(fsqrt_3, FSQRT_3);
+		RUNFOR_VU(fsqrt_fma_1, FSQRT_FMA_1);
+		RUNFOR_VU(fsqrt_fma_2, FSQRT_FMA_2);
+		RUNFOR_VU(fsqrt_fma_3, FSQRT_FMA_3);
+	}
+
 	printf("FP heap: %lu infix, %lu unary, %lu total (git %s)\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu, GIT_HASH);
 
 	int lowbounds[] = {FADD_0, FSUB_0, FMUL_0, FDIV_0, FSQRT_0};
@@ -268,7 +288,7 @@ bool fp_heap() {
 				if (v == lowbounds[i]) {
 					ref_exact = true;
 				}
-				ref = lowbounds[i];				
+				ref = lowbounds[i];
 				break;
 			}
 		}
@@ -279,7 +299,7 @@ bool fp_heap() {
 		if (!ref_exact) {
 			printf(" x%0.1f overhead", fp_heap_running_avg[v].avg / reference_avg);
 			unsigned passes = fp_heap_passed[v];
-			unsigned out_of = fp_heap_running_avg[v].count * 2;
+			unsigned out_of = fp_heap_count[v];
 			if (passes < out_of) {
 				printf(" [%u/%u]", passes, out_of);
 			}

@@ -41,9 +41,12 @@ GIT_HASH := $(shell git log -1 --format=%h)
 # don't even bother with optimisations on
 tests/rx_semifloat/the_randomx_fp_heap.o: tests/rx_semifloat/the_randomx_fp_heap.c tests/rx_semifloat/the_randomx_fp_heap.h
 	tcc -c -o $@ tests/rx_semifloat/the_randomx_fp_heap.c
-tests/rx_semifloat/rx_semifloat: tests/rx_semifloat/rx_semifloat_test.c src/jit/stubs/rx_semifloat.c tests/rx_semifloat/the_randomx_fp_heap.o
-	clang -march=native -ffp-model=strict $(UFLAGS) -lm -O3 -o $@ \
-		tests/rx_semifloat/rx_semifloat_test.c src/jit/stubs/rx_semifloat.c tests/rx_semifloat/the_randomx_fp_heap.o \
+# ensure separate compilation units, NO LTO/INLINING
+tests/rx_semifloat/rx_semifloat_stub.o: src/jit/stubs/rx_semifloat.c
+	clang -march=native -fno-lto $(UFLAGS) -O3 -c -o $@ $<
+tests/rx_semifloat/rx_semifloat: tests/rx_semifloat/rx_semifloat_test.c tests/rx_semifloat/rx_semifloat_stub.o tests/rx_semifloat/the_randomx_fp_heap.o
+	clang -march=native -fno-lto -ffp-model=strict $(UFLAGS) -lm -O3 -o $@ \
+		tests/rx_semifloat/rx_semifloat_test.c tests/rx_semifloat/rx_semifloat_stub.o tests/rx_semifloat/the_randomx_fp_heap.o \
 		-DGIT_HASH=\"$(GIT_HASH)\"
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
