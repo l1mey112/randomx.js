@@ -29,7 +29,7 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(UFLAGS) \
 all: src/dataset/dataset.wasm src/vm/vm.wasm tests/harness.wasm tests/semifloat/semifloat
 
 clean:
-	rm -f **/*.wasm **/*.wasm.pages.ts include/configuration.h src/jit/stubs/*.h
+	rm -f **/*.wasm **/*.wasm.pages.ts include/configuration.h src/jit/stubs/*.h **/*.o
 	rm -rf dist
 
 include/configuration.h: include/configuration.ts

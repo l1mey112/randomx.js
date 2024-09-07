@@ -276,7 +276,7 @@ bool fp_heap() {
 
 		double reference_avg = fp_heap_running_avg[ref].avg;
 
-		printf("  %11s: %2uclks", fp_heap_opstr[v], (unsigned)round(fp_heap_running_avg[v].avg));
+		printf("  %11s  | %3uclks", fp_heap_opstr[v], (unsigned)round(fp_heap_running_avg[v].avg));
 		if (!ref_exact) {
 			printf(" x%0.1f overhead", fp_heap_running_avg[v].avg / reference_avg);
 			unsigned passes = fp_heap_passed[v];
