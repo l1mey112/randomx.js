@@ -145,9 +145,8 @@ static const char *fp_heap_opstr[FCOUNT] = {
 static running_avg_t fp_heap_running_avg[FCOUNT] = {};
 static unsigned fp_heap_passed[FCOUNT] = {};
 
-// INFO: keep in mind now that, yes, we are testing the clock cycles of inevitable
-//       mispredicted branches when dispatching a call to a function pointer.
-//       that doesn't matter though, since its all relative and evens out in the end
+// the FP HEAP dataset has been sorted in such a way that calls to the same function appear together
+// this is to minimize the impact of branch mispredictions, as they used to add about an extra 50 cycles
 
 #define TIMEIT(v, f)                                                    \
 	do {                                                                \
