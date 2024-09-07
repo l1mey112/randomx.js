@@ -1,5 +1,5 @@
 *.o
-tests/semifloat/semifloat
+tests/rx_semifloat/rx_semifloat
 include/configuration.h
 *main.js
 *.wasm

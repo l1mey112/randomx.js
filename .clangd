@@ -11,12 +11,12 @@ InlayHints:
 # add [-msimd128, --target=wasm32] for wasm __builtins
 # -msimd128, --target=wasm32
 If:
-  PathExclude: tests/semifloat.*
+  PathExclude: tests/rx_semifloat.*
 CompileFlags:
   Add: [--target=wasm32, -msimd128]
   Compiler: clang
 ---
 If:
-  PathMatch: tests/semifloat.*
+  PathMatch: tests/rx_semifloat.*
 CompileFlags:
   Add: [-march=native]
