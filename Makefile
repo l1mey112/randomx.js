@@ -35,13 +35,16 @@ clean:
 include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
 
+GIT_HASH := $(shell git log -1 --format=%h)
+
 # FP heap is so fucking large that it only makes sense to compile with TCC
 # don't even bother with optimisations on
 tests/semifloat/the_randomx_fp_heap.o: tests/semifloat/the_randomx_fp_heap.c tests/semifloat/the_randomx_fp_heap.h
 	tcc -c -o $@ tests/semifloat/the_randomx_fp_heap.c
 tests/semifloat/semifloat: tests/semifloat/semifloat_test.c src/jit/stubs/semifloat.c tests/semifloat/the_randomx_fp_heap.o
 	clang -march=native -ffp-model=strict $(UFLAGS) -lm -O3 -o $@ \
-		tests/semifloat/semifloat_test.c src/jit/stubs/semifloat.c tests/semifloat/the_randomx_fp_heap.o
+		tests/semifloat/semifloat_test.c src/jit/stubs/semifloat.c tests/semifloat/the_randomx_fp_heap.o \
+		-DGIT_HASH=\"$(GIT_HASH)\"
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
 	clang -O3 $(CFLAGS) -mrelaxed-simd $(LDFLAGS) -o $@ $<

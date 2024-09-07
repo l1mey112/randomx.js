@@ -1,13 +1,15 @@
 #include <assert.h>
-#include <fenv.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "freestanding.h"
 #include "wasm_simd128_polyfill.h"
 
 #include "rdtsc.h"
+
+#ifndef GIT_HASH
+#define GIT_HASH "unknown"
+#endif
 
 typedef struct running_avg_t running_avg_t;
 
@@ -86,51 +88,6 @@ v128_t fsqrt_fma_1(v128_t dest);
 v128_t fsqrt_fma_2(v128_t dest);
 v128_t fsqrt_fma_3(v128_t dest);
 
-static finst_t instructions[] = {
-	{"fadd", FDEST_F, FSRC_A | FSRC_R, {fadd_0, fadd_1, fadd_2, fadd_3}},
-	{"fsub", FDEST_F, FSRC_A | FSRC_R, {fsub_0, fsub_1, fsub_2, fsub_3}},
-	{"fmul", FDEST_E, FSRC_A, {fmul_0, fmul_1, fmul_2, fmul_3}},
-	{"fmul (fma)", FDEST_E, FSRC_A, {fmul_0, fmul_fma_1, fmul_fma_2, fmul_fma_3}},
-	{"fdiv", FDEST_E, FSRC_R, {fdiv_0, fdiv_1, fdiv_2, fdiv_3}},
-	{"fdiv (fma)", FDEST_E, FSRC_R, {fdiv_0, fdiv_fma_1, fdiv_fma_2, fdiv_fma_3}},
-	{"fsqrt", FDEST_E, 0, {(void *)fsqrt_0, (void *)fsqrt_1, (void *)fsqrt_2, (void *)fsqrt_3}},
-	{"fsqrt (fma)", FDEST_E, 0, {(void *)fsqrt_0, (void *)fsqrt_fma_1, (void *)fsqrt_fma_2, (void *)fsqrt_fma_3}},
-};
-
-// PCG32
-static uint64_t rngstate = 0;
-
-uint32_t pcg32_random_r() {
-	uint64_t oldstate = rngstate;
-	// Advance internal state
-	rngstate = oldstate * 6364136223846793005ULL + 1;
-	// Calculate output function (XSH RR), uses old state for max ILP
-	uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
-	uint32_t rot = oldstate >> 59u;
-	return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
-}
-
-// http://marc-b-reynolds.github.io/math/2020/06/16/UniformFloat.html
-double uniform(double lo, double hi) {
-	uint64_t low32 = pcg32_random_r();
-	uint64_t high32 = pcg32_random_r();
-	uint64_t rv = low32 | (high32 << 32);
-
-	double uni = (double)(rv >> (64 - 53)) * 0x1p-53; // [0,1)
-
-	if (isinf(hi)) {
-		hi = 0x1.fffffffffffffp100;
-	}
-
-	return lo + (hi - lo) * uni;
-}
-
-v128_t uniform128(double lo, double hi) {
-	double v0 = uniform(lo, hi);
-	double v1 = uniform(lo, hi);
-	return wasm_f64x2_make(v0, v1);
-}
-
 struct running_avg_t {
 	double avg;
 	unsigned count;
@@ -145,171 +102,6 @@ static void running_avg_update(running_avg_t *avg, double value) {
 	double a = 1.0 / avg->count;
 	double b = 1.0 - a;
 	avg->avg = a * value + b * avg->avg;
-}
-
-bool test(finst_t *inst, unsigned samples) {
-	const int fprc_env[] = {
-		FE_TONEAREST,
-		FE_DOWNWARD,
-		FE_UPWARD,
-		FE_TOWARDZERO,
-	};
-
-	running_avg_t running_avg[4] = {};
-	unsigned complete[4] = {};
-
-#define TIMEIT(v, f)                                                    \
-	do {                                                                \
-		uint32_t rdtsc_base = rdtsc_overhead();                         \
-		uint32_t start = rdtsc();                                       \
-		f;                                                              \
-		uint32_t end = rdtsc();                                         \
-		int32_t ncycles = (int32_t)(end - start) - rdtsc_base;          \
-		running_avg_update(&running_avg[v], ncycles < 0 ? 0 : ncycles); \
-	} while (0)
-
-	// boundary conditions
-	unsigned INFINITY_COUNT = (samples / 100) | 2;
-	unsigned bound_idx = 0;
-
-	for (unsigned i = 0; i < samples; i++) {
-		v128_t dest, src, truth, result;
-
-		switch (inst->dest) {
-		case FDEST_F:
-			dest = uniform128(-3.0e+14, 3.0e+14);
-			break;
-		case FDEST_E:
-			if (bound_idx < INFINITY_COUNT / 2) {
-				dest = wasm_f64x2_const(INFINITY, INFINITY);
-				bound_idx++;
-			} else if (bound_idx < INFINITY_COUNT) {
-				dest = wasm_f64x2_const(0x1.fffffffffffffp1023, 0x1.fffffffffffffp1023);
-				bound_idx++;
-			} else {
-				dest = uniform128(1.7e-77, INFINITY);
-			}
-			break;
-		}
-
-		double src_lo, src_hi;
-
-		if (inst->src & FSRC_A) {
-			src_lo = 1;
-			src_hi = 4294967296;
-		}
-
-		if (inst->src & FSRC_R) {
-			if (inst->dest == FDEST_F) {
-				src_lo = fmin(src_lo, -3.0e+14);
-				src_hi = fmax(src_hi, 3.0e+14);
-			} else {
-				src_lo = fmin(src_lo, 1.7e-77);
-				src_hi = fmax(src_hi, INFINITY);
-			}
-		}
-
-		src = uniform128(src_lo, src_hi);
-
-		for (int v = 1; v < 4; v++) {
-			fesetround(fprc_env[v]);
-			TIMEIT(0, { truth = inst->fprc[0](dest, src); });
-
-			fesetround(FE_TONEAREST);
-			TIMEIT(v, { result = inst->fprc[v](dest, src); });
-
-			double dest0 = wasm_f64x2_extract_lane(dest, 0);
-			double dest1 = wasm_f64x2_extract_lane(dest, 1);
-			double src0 = wasm_f64x2_extract_lane(src, 0);
-			double src1 = wasm_f64x2_extract_lane(src, 1);
-			double truth0 = wasm_f64x2_extract_lane(truth, 0);
-			double truth1 = wasm_f64x2_extract_lane(truth, 1);
-			double result0 = wasm_f64x2_extract_lane(result, 0);
-			double result1 = wasm_f64x2_extract_lane(result, 1);
-
-#define FAIL(f) \
-	printf("FAIL: [%s fprc(%d)] truth(%a, %a) == %a != op(...) == %a\n", inst->desc, v, dest##f, src##f, truth##f, result##f)
-
-			if (truth0 == result0) {
-				complete[v]++;
-			} else {
-				FAIL(0);
-			}
-
-			if (truth1 == result1) {
-				complete[v]++;
-			} else {
-				FAIL(1);
-			}
-		}
-	}
-
-#undef FAIL
-#undef TIMEIT
-
-	bool failed = false;
-
-	printf("%s:\n", inst->desc);
-	for (int v = 0; v < 4; v++) {
-		if (v == 0) {
-			printf("  fprc(%d): %uclks\n", v, (unsigned)running_avg[v].avg);
-		} else {
-			if (complete[v] != samples * 2) {
-				failed = true;
-			}
-
-			printf("  fprc(%d): %uclks [%d/%d] x%u overhead\n", v, (unsigned)running_avg[v].avg, complete[v], samples * 2, (unsigned)round(running_avg[v].avg / running_avg[0].avg));
-		}
-	}
-
-	return failed;
-}
-
-bool mul_boundary() {
-	double mul;
-	bool failed = false;
-
-#define TEST(kind)                                             \
-	do {                                                       \
-		fesetround(kind);                                      \
-		mul = 0x1.fffffffffffffp1023 * 0x1.fffffffffffffp1023; \
-	} while (0)
-
-	TEST(FE_TONEAREST);
-	if (mul == INFINITY) {
-		printf("fprc(0): fin * fin == inf   (inf)\n");
-	} else {
-		failed = true;
-		printf("FAIL: fprc(0): fin * fin != inf == %a\n", mul);
-	}
-
-	TEST(FE_DOWNWARD);
-	if (mul == 0x1.fffffffffffffp1023) {
-		printf("fprc(1): fin * fin == _inf_ (0x1.fffffffffffffp+1023)\n");
-	} else {
-		failed = true;
-		printf("FAIL: fprc(1): fin * fin != _inf_ == %a\n", mul);
-	}
-
-	TEST(FE_UPWARD);
-	if (mul == INFINITY) {
-		printf("fprc(2): fin * fin == inf   (inf)\n");
-	} else {
-		failed = true;
-		printf("FAIL: fprc(2): fin * fin != inf == %a\n", mul);
-	}
-
-	TEST(FE_TOWARDZERO);
-	if (mul == 0x1.fffffffffffffp1023) {
-		printf("fprc(3): fin * fin == _inf_ (0x1.fffffffffffffp+1023)\n");
-	} else {
-		failed = true;
-		printf("FAIL: fprc(3): fin * fin != _inf_ == %a\n", mul);
-	}
-
-	fesetround(FE_TONEAREST);
-
-	return failed;
 }
 
 #include "the_randomx_fp_heap.h"
@@ -351,6 +143,11 @@ static const char *fp_heap_opstr[FCOUNT] = {
 };
 
 static running_avg_t fp_heap_running_avg[FCOUNT] = {};
+static unsigned fp_heap_passed[FCOUNT] = {};
+
+// INFO: keep in mind now that, yes, we are testing the clock cycles of inevitable
+//       mispredicted branches when dispatching a call to a function pointer.
+//       that doesn't matter though, since its all relative and evens out in the end
 
 #define TIMEIT(v, f)                                                    \
 	do {                                                                \
@@ -368,7 +165,7 @@ void TESTV(int op, double x0, double x1, double y0, double y1, double z0, double
 
 	fp_heap_v++;
 
-	static v128_t (*const opf[])(v128_t, v128_t) = {
+	static v128_t (*const opft[])(v128_t, v128_t) = {
 		[FADD_0] = fadd_0,
 		[FADD_1] = fadd_1,
 		[FADD_2] = fadd_2,
@@ -393,8 +190,10 @@ void TESTV(int op, double x0, double x1, double y0, double y1, double z0, double
 		[FDIV_FMA_3] = fdiv_fma_3,
 	};
 
+	v128_t (*opf)(v128_t, v128_t) = opft[op];
+
 	v128_t result;
-	TIMEIT(op, { result = opf[op](v, w); });
+	TIMEIT(op, { result = opf(v, w); });
 
 	double result0 = wasm_f64x2_extract_lane(result, 0);
 	double result1 = wasm_f64x2_extract_lane(result, 1);
@@ -402,11 +201,15 @@ void TESTV(int op, double x0, double x1, double y0, double y1, double z0, double
 	if (result0 != z0) {
 		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, y0, result0, z0);
 		fp_heap_failed = true;
+	} else {
+		fp_heap_passed[op]++;
 	}
 
 	if (result1 != z1) {
 		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x1, y1, result1, z1);
 		fp_heap_failed = true;
+	} else {
+		fp_heap_passed[op]++;
 	}
 }
 
@@ -415,7 +218,7 @@ void TESTVU(int op, double x0, double x1, double z0, double z1) {
 
 	fp_heap_vu++;
 
-	static v128_t (*const opf[])(v128_t) = {
+	static v128_t (*const opft[])(v128_t) = {
 		[FSQRT_0] = fsqrt_0,
 		[FSQRT_1] = fsqrt_1,
 		[FSQRT_2] = fsqrt_2,
@@ -425,8 +228,10 @@ void TESTVU(int op, double x0, double x1, double z0, double z1) {
 		[FSQRT_FMA_3] = fsqrt_fma_3,
 	};
 
+	v128_t (*opf)(v128_t) = opft[op];
+
 	v128_t result;
-	TIMEIT(op, { result = opf[op](v); });
+	TIMEIT(op, { result = opf(v); });
 
 	double result0 = wasm_f64x2_extract_lane(result, 0);
 	double result1 = wasm_f64x2_extract_lane(result, 1);
@@ -434,11 +239,15 @@ void TESTVU(int op, double x0, double x1, double z0, double z1) {
 	if (result0 != z0) {
 		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, result0, z0);
 		fp_heap_failed = true;
+	} else {
+		fp_heap_passed[op]++;
 	}
 
 	if (result1 != z1) {
 		printf("FAIL: %s(%a, %a) == %a != %a\n", fp_heap_opstr[op], x0, x1, result1, z1);
 		fp_heap_failed = true;
+	} else {
+		fp_heap_passed[op]++;
 	}
 }
 
@@ -446,9 +255,37 @@ void TESTVU(int op, double x0, double x1, double z0, double z1) {
 
 bool fp_heap() {
 	SAMPLE();
-	printf("FP heap: %lu infix, %lu unary, %lu total\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu);
+	printf("FP heap: %lu infix, %lu unary, %lu total (git %s)\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu, GIT_HASH);
+
+	int lowbounds[] = {FADD_0, FSUB_0, FMUL_0, FDIV_0, FSQRT_0};
 	for (int v = 0; v < FCOUNT; v++) {
-		printf("  %11s: %uclks (%u ops)\n", fp_heap_opstr[v], (unsigned)fp_heap_running_avg[v].avg, fp_heap_running_avg[v].count);
+		// iterate backwards
+
+		bool ref_exact = false;
+		int ref = 0;
+
+		for (int i = 5; i-- > 0;) {
+			if (v >= lowbounds[i]) {
+				if (v == lowbounds[i]) {
+					ref_exact = true;
+				}
+				ref = lowbounds[i];				
+				break;
+			}
+		}
+
+		double reference_avg = fp_heap_running_avg[ref].avg;
+
+		printf("  %11s: %2uclks", fp_heap_opstr[v], (unsigned)round(fp_heap_running_avg[v].avg));
+		if (!ref_exact) {
+			printf(" x%0.1f overhead", fp_heap_running_avg[v].avg / reference_avg);
+			unsigned passes = fp_heap_passed[v];
+			unsigned out_of = fp_heap_running_avg[v].count * 2;
+			if (passes < out_of) {
+				printf(" [%u/%u]", passes, out_of);
+			}
+		}
+		printf("\n");
 	}
 	return fp_heap_failed;
 }
@@ -480,18 +317,9 @@ bool __attribute__((optnone)) scalar_fmatest(void) {
 }
 
 int main() {
-	bool failed = false;
-
 	assert(scalar_fmatest());
 	assert(simd_fmatest());
 
-
-	for (int i = 0; i < (int)sizeof(instructions) / (int)sizeof(instructions[0]); i++) {
-		failed |= test(&instructions[i], 5000);
-	}
-
-	failed |= mul_boundary();
-	failed |= fp_heap();
-
-	return failed;
+	// used to have boundary tests and overhead tests, now the FP heap covers everything
+	return fp_heap();
 }
