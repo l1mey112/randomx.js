@@ -1,9 +1,9 @@
 #include "configuration.h"
 #include "freestanding.h"
-
 #include "aes/aes.h"
 #include "blake2b/blake2b.h"
-#include "jit/inst.h"
+#include "vm/vm.h"
+
 #include <stdint.h>
 #include <wasm_simd128.h>
 
@@ -28,27 +28,10 @@ void update_hash(uint32_t data_length) {
 	blake2b_update(SS, H_buffer, data_length);
 }
 
-typedef struct rx_program_t rx_program_t;
-typedef struct rx_reg_t rx_reg_t;
-typedef struct f64x2_t f64x2_t;
+uint8_t S[64];  // 512-bit seed - state of the generator gen4
+rx_program_t P; // program buffer
 
-// 128 + 8 * RANDOMX_PROGRAM_SIZE
-struct rx_program_t {
-	uint64_t entropy[16];
-	rx_inst_t program[RANDOMX_PROGRAM_SIZE];
-};
-
-struct f64x2_t {
-	double lo;
-	double hi;
-};
-
-struct rx_reg_t {
-	uint64_t r[8];
-	f64x2_t f[4];
-	f64x2_t e[4];
-	f64x2_t a[4];
-};
+alignas(16) rx_vm_t VM;
 
 const int mantissa_size = 52;
 const int exponent_size = 11;
@@ -61,7 +44,7 @@ const uint64_t const_exponent_bits = 0x300;
 const uint64_t dynamic_mantissa_mask = (1ULL << (mantissa_size + dynamic_exponent_bits)) - 1;
 
 static inline uint64_t get_small_positive_float_bits(uint64_t entropy) {
-	uint64_t exponent = entropy >> 59; //0..31
+	uint64_t exponent = entropy >> 59; // 0..31
 	uint64_t mantissa = entropy & mantissa_mask;
 	exponent += exponent_bias;
 	exponent &= exponent_mask;
@@ -81,12 +64,6 @@ static inline uint64_t get_float_mask(uint64_t entropy) {
 	return (entropy & mask_22bit) | get_static_exponent(entropy);
 }
 
-uint8_t S[64];  // 512-bit seed - state of the generator gen4
-rx_program_t P; // program buffer
-
-alignas(16)
-rx_reg_t R;
-
 WASM_EXPORT("R")
 void finalise_hash() {
 	blake2b_finalise(SS, S);
@@ -94,30 +71,30 @@ void finalise_hash() {
 	// S now contains the seed
 	fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
 
-	/* for (int chain = 0; chain < RANDOMX_PROGRAM_COUNT - 1; ++chain) {
+	for (int chain = 0; chain < RANDOMX_PROGRAM_COUNT - 1; ++chain) {
 		// program generation
-		fillAes4Rx4(S, sizeof(P), (void*)&P);
+		fillAes4Rx4(S, sizeof(P), (void *)&P);
 
-		R.a[0].lo = get_small_positive_float_bits(P.entropy[0]);
-		R.a[0].hi = get_small_positive_float_bits(P.entropy[1]);
-		R.a[1].lo = get_small_positive_float_bits(P.entropy[2]);
-		R.a[1].hi = get_small_positive_float_bits(P.entropy[3]);
-		R.a[2].lo = get_small_positive_float_bits(P.entropy[4]);
-		R.a[2].hi = get_small_positive_float_bits(P.entropy[5]);
-		R.a[3].lo = get_small_positive_float_bits(P.entropy[6]);
-		R.a[3].hi = get_small_positive_float_bits(P.entropy[7]);
-		uint32_t ma = P.entropy[8] & ((RANDOMX_DATASET_BASE_SIZE - 1) & ~(64 - 1));
-		uint32_t mx = P.entropy[10];
+		VM.a[0].lo = get_small_positive_float_bits(P.entropy[0]);
+		VM.a[0].hi = get_small_positive_float_bits(P.entropy[1]);
+		VM.a[1].lo = get_small_positive_float_bits(P.entropy[2]);
+		VM.a[1].hi = get_small_positive_float_bits(P.entropy[3]);
+		VM.a[2].lo = get_small_positive_float_bits(P.entropy[4]);
+		VM.a[2].hi = get_small_positive_float_bits(P.entropy[5]);
+		VM.a[3].lo = get_small_positive_float_bits(P.entropy[6]);
+		VM.a[3].hi = get_small_positive_float_bits(P.entropy[7]);
+		VM.ma = P.entropy[8] & ((RANDOMX_DATASET_BASE_SIZE - 1) & ~(64 - 1));
+		VM.mx = P.entropy[10];
 		uint64_t addr_registers = P.entropy[12];
-		uint32_t readReg0 = 0 + (addr_registers & 1);
+		VM.read_reg0 = 0 + (addr_registers & 1);
 		addr_registers >>= 1;
-		uint32_t readReg1 = 2 + (addr_registers & 1);
+		VM.read_reg1 = 2 + (addr_registers & 1);
 		addr_registers >>= 1;
-		uint32_t readReg2 = 4 + (addr_registers & 1);
+		VM.read_reg2 = 4 + (addr_registers & 1);
 		addr_registers >>= 1;
-		uint32_t readReg3 = 6 + (addr_registers & 1);
+		VM.read_reg3 = 6 + (addr_registers & 1);
 		uint64_t dataset_offset = (P.entropy[13] % (RANDOMX_DATASET_EXTRA_SIZE / 64 + 1)) * 64;
 		uint64_t eMask0 = get_float_mask(P.entropy[14]);
 		uint64_t eMask1 = get_float_mask(P.entropy[15]);
-	} */
+	}
 }
