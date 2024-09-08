@@ -13,12 +13,11 @@
 static inline uint64_t rdtsc() {
 	uint32_t lo, hi;
 	asm volatile(
-		"xorl %%eax, %%eax\n\t"
-		"cpuid\n\t"
 		"rdtsc\n\t"
+		"lfence\n\t"
 		: "=a"(lo), "=d"(hi)
 		:
-		: "%ebx", "%ecx");
+		: "%ecx");
 	return (uint64_t)hi << 32 | lo;
 }
 

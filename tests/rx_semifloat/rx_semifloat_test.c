@@ -95,7 +95,7 @@ struct running_avg_t {
 
 // TODO: i should probably be removing statistical outliers
 static void running_avg_update(running_avg_t *avg, double value) {
-	if (value < 0.0) {
+	if (value <= 0.0) {
 		return;
 	}
 	if (value > 75) {
