@@ -85,6 +85,10 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 	memcpy(p, (uint8_t[])__VA_ARGS__, sizeof((uint8_t[])__VA_ARGS__)); \
 	p += sizeof((uint8_t[])__VA_ARGS__)
 
+#define WASM_STUB(stub)                                             \
+	memcpy(p, stub, sizeof(stub)); \
+	p += sizeof(stub)
+
 #define WASM_U32_U8_THUNK(...)                \
 	WASM_U32(sizeof((uint8_t[])__VA_ARGS__)); \
 	WASM_U8_THUNK(__VA_ARGS__)

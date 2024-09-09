@@ -1,0 +1,37 @@
+(module
+	(func (export "ssh_main") (param $item_number i64) (result i64 i64 i64 i64 i64 i64 i64 i64)
+		(local $mixblock_ptr i32)
+		(local $r0 i64) (local $r1 i64) (local $r2 i64) (local $r3 i64) (local $r4 i64) (local $r5 i64) (local $r6 i64) (local $r7 i64)
+
+		;; r0 = (itemNumber + 1) * 6364136223846793005;
+		;; r1 = r0 ^ 9298411001130361340;
+		;; r2 = r0 ^ 12065312585734608966;
+		;; r3 = r0 ^ 9306329213124626780;
+		;; r4 = r0 ^ 5281919268842080866;
+		;; r5 = r0 ^ 10536153434571861004;
+		;; r6 = r0 ^ 3398623926847679864;
+		;; r7 = r0 ^ 9549104520008361294;
+		(local.set $r0 (i64.mul (i64.add (local.get $item_number) (i64.const 1)) (i64.const 6364136223846793005)))
+		(local.set $r1 (i64.xor (local.get $r0) (i64.const 9298411001130361340)))
+		(local.set $r2 (i64.xor (local.get $r0) (i64.const 12065312585734608966)))
+		(local.set $r3 (i64.xor (local.get $r0) (i64.const 9306329213124626780)))
+		(local.set $r4 (i64.xor (local.get $r0) (i64.const 5281919268842080866)))
+		(local.set $r5 (i64.xor (local.get $r0) (i64.const 10536153434571861004)))
+		(local.set $r6 (i64.xor (local.get $r0) (i64.const 3398623926847679864)))
+		(local.set $r7 (i64.xor (local.get $r0) (i64.const 9549104520008361294)))
+
+		;; execute superscalar hash functions up till RANDOMX_CACHE_ACCESSES
+		call $P_ssh_code
+
+		local.get $r0
+		local.get $r1
+		local.get $r2
+		local.get $r3
+		local.get $r4
+		local.get $r5
+		local.get $r6
+		local.get $r7
+	)
+
+	(func $P_ssh_code)
+)
