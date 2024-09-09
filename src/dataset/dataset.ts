@@ -1,5 +1,5 @@
 import { env_npf_putc } from '../printf/printf'
-import { locate_import } from '../wasm_prefix'
+import { adjust_imported_shared_memory, locate_import } from '../wasm_prefix'
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
 
@@ -14,43 +14,7 @@ export type Cache = {
 	thunk: Uint8Array // WASM JIT code
 }
 
-function adjust_imported_shared_memory(binary: Uint8Array, needle: string, shared: boolean) {
-	// the import section is near the start, no need to step over the entire binary
-	// indexOf doesn't work on Uint8Array
-
-	let p = locate_import(binary, needle)
-
-	// 0x02 memtype
-
-	// memtype ::= limits
-	// limits  ::= 0x00 n:u32         => { min n }
-	//           | 0x01 n:u32 m:u32   => { min n, max m }
-	//           | 0x03 n:u32 m:u32   => { min n, max m, shared }
-
-	if (binary[p] !== 0x02) {
-		throw new Error('Expected memtype')
-	}
-	p += 1 // 0x02
-
-	if (binary[p] === 0x00) {
-		throw new Error('Cannot patch in place')
-	}
-
-	binary[p] = shared ? 0x03 : 0x01
-}
-
-export async function randomx_construct_cache_oneshot(K?: Uint8Array | undefined | null, conf?: { shared?: boolean, hard_block?: boolean } | undefined | null): Promise<Cache> {
-	K ??= new Uint8Array()
-
-	if (K.length > 60) {
-		throw new Error('Key length is too long (max 60 bytes)')
-	}
-
-	if (conf?.hard_block) {
-		throw new Error()
-	}
-
-	const is_shared = !!conf?.shared
+export async function create_module(is_shared: boolean): Promise<[WebAssembly.Memory, DatasetModule]> {
 	adjust_imported_shared_memory(wasm, '\x03env\x06memory', is_shared) // patch in place
 
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
@@ -64,7 +28,10 @@ export async function randomx_construct_cache_oneshot(K?: Uint8Array | undefined
 	})
 
 	const exports = module.instance.exports as DatasetModule
+	return [memory, exports]
+}
 
+export function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): Cache {
 	const jit_begin = exports.b()
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
@@ -74,7 +41,33 @@ export async function randomx_construct_cache_oneshot(K?: Uint8Array | undefined
 
 	return {
 		memory,
-		thunk: jit_buffer,
+		thunk: jit_buffer
+	}
+}
+
+export async function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: { shared?: boolean, do_block?: boolean } | undefined | null): Promise<Cache> {
+	K ??= new Uint8Array()
+
+	if (K.length > 60) {
+		throw new Error('Key length is too long (max 60 bytes)')
+	}
+
+	if (conf?.do_block!!) {
+		const [memory, exports] = await create_module(!!conf?.shared)
+		return initialise(K, memory, exports)
+	} else {
+		return new Promise((res, rej) => {
+			const worker = new Worker('./cache_worker.ts')
+			worker.postMessage(K)
+			worker.onmessage = (event: MessageEvent<Cache>) => {
+				res(event.data)
+				worker.terminate()
+			}
+			worker.onerror = (event: ErrorEvent) => {
+				rej(event.error)
+				worker.terminate()
+			}
+		})
 	}
 }
 

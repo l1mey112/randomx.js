@@ -27,3 +27,28 @@ export function locate_import(binary: Uint8Array, needle: string): number {
 
 	return p
 }
+
+export function adjust_imported_shared_memory(binary: Uint8Array, needle: string, shared: boolean) {
+	// the import section is near the start, no need to step over the entire binary
+	// indexOf doesn't work on Uint8Array
+
+	let p = locate_import(binary, needle)
+
+	// 0x02 memtype
+
+	// memtype ::= limits
+	// limits  ::= 0x00 n:u32         => { min n }
+	//           | 0x01 n:u32 m:u32   => { min n, max m }
+	//           | 0x03 n:u32 m:u32   => { min n, max m, shared }
+
+	if (binary[p] !== 0x02) {
+		throw new Error('Expected memtype')
+	}
+	p += 1 // 0x02
+
+	if (binary[p] === 0x00) {
+		throw new Error('Cannot patch in place')
+	}
+
+	binary[p] = shared ? 0x03 : 0x01
+}
