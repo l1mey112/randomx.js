@@ -9,7 +9,7 @@ await plugin({
 			const buffer = await Bun.file(args.path).arrayBuffer()
 
 			return {
-				exports: { default: buffer },
+				exports: { default: new Uint8Array(buffer) },
 				loader: "object",
 			}
 		})

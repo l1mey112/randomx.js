@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { buffer, module }  from './harness'
-import { randomx_construct_cache, randomx_superscalarhash } from '../src/dataset/dataset'
+import { randomx_construct_cache_oneshot, randomx_superscalarhash } from '../src/dataset/dataset'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
@@ -29,7 +29,7 @@ test('chained programs', () => {
 })
 
 test('dataset initialisation', async () => {
-	const cache = await randomx_construct_cache(new TextEncoder().encode('test key 000'))
+	const cache = await randomx_construct_cache_oneshot(new TextEncoder().encode('test key 000'))
 	const hash = await randomx_superscalarhash(cache)
 
 	const dataset_items_0 = hash(0n)
@@ -41,4 +41,11 @@ test('dataset initialisation', async () => {
 	expect(dataset_items_10000000[0]).toEqual(BigInt.asIntN(64, 0x7943a1f6186ffb72n))
 	expect(dataset_items_20000000[0]).toEqual(BigInt.asIntN(64, 0x9035244d718095e1n))
 	expect(dataset_items_30000000[0]).toEqual(BigInt.asIntN(64, 0x145a5091f7853099n))
+})
+
+test('cache memory', async () => {
+	let n = await randomx_construct_cache_oneshot(null, { shared: true })
+	expect(n.memory.buffer).toBeInstanceOf(SharedArrayBuffer)
+	n = await randomx_construct_cache_oneshot(null, { shared: false })
+	expect(n.memory.buffer).not.toBeInstanceOf(SharedArrayBuffer)
 })

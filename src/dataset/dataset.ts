@@ -1,4 +1,5 @@
 import { env_npf_putc } from '../printf/printf'
+import { locate_import } from '../wasm_prefix'
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
 
@@ -13,26 +14,46 @@ export type Cache = {
 	thunk: Uint8Array // WASM JIT code
 }
 
-export async function randomx_construct_cache(K?: Uint8Array, conf?: { shared?: boolean }): Promise<Cache> {
+function adjust_imported_shared_memory(binary: Uint8Array, needle: string, shared: boolean) {
+	// the import section is near the start, no need to step over the entire binary
+	// indexOf doesn't work on Uint8Array
+
+	let p = locate_import(binary, needle)
+
+	// 0x02 memtype
+
+	// memtype ::= limits
+	// limits  ::= 0x00 n:u32         => { min n }
+	//           | 0x01 n:u32 m:u32   => { min n, max m }
+	//           | 0x03 n:u32 m:u32   => { min n, max m, shared }
+
+	if (binary[p] !== 0x02) {
+		throw new Error('Expected memtype')
+	}
+	p += 1 // 0x02
+
+	if (binary[p] === 0x00) {
+		throw new Error('Cannot patch in place')
+	}
+
+	binary[p] = shared ? 0x03 : 0x01
+}
+
+export async function randomx_construct_cache_oneshot(K?: Uint8Array | undefined | null, conf?: { shared?: boolean, hard_block?: boolean } | undefined | null): Promise<Cache> {
 	K ??= new Uint8Array()
 
 	if (K.length > 60) {
 		throw new Error('Key length is too long (max 60 bytes)')
 	}
 
-	// TODO: implement this later
-	if (conf?.shared) {
-		throw new Error('Shared memory is not implemented yet')
+	if (conf?.hard_block) {
+		throw new Error()
 	}
 
-	// to enable shared memory
-	// 1. memory must not be growable, initial = maximum
-	//    - must be completed on the host side and binary
-	//    - use --no-growable-memory (not available in debian builds of clang)
-	// 2. memory import must be set to shared
-	//    - can be patched based if needed
+	const is_shared = !!conf?.shared
+	adjust_imported_shared_memory(wasm, '\x03env\x06memory', is_shared) // patch in place
 
-	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: !!conf?.shared })
+	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
 	const module = await WebAssembly.instantiate(wasm, {
 		e: {
 			ch: env_npf_putc

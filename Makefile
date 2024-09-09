@@ -40,7 +40,7 @@ UFLAGS = -Iinclude -Isrc
 # https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(UFLAGS) \
-	-msimd128 -mbulk-memory --no-wasm-opt
+	-msimd128 -mbulk-memory
 
 # -matomics -Wl,--shared-memory to use shared memory
 
@@ -74,7 +74,7 @@ src/jit/stubs/%.wasm: src/jit/stubs/%.c
 src/jit/stubs/%.wasm: src/jit/stubs/%.wat
 	wat2wasm $< -o $@ --debug-names --enable-all
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
-	./stubgen.ts $< > $@
+	./scripts/stubgen.ts $< > $@
 
 tests/harness.wasm: $(TESTS_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
@@ -87,6 +87,8 @@ src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
 		-Wl,--import-memory \
 		-o $@ $(DATASET_C_SOURCES)
+
+	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
 
 	wasm-strip $@
 	$(wasm-opt) -all -O4 -Oz $@ -o $@
