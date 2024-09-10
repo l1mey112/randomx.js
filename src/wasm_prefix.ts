@@ -28,6 +28,39 @@ export function locate_import(binary: Uint8Array, needle: string): number {
 	return p
 }
 
+export function u32p(buf: Uint8Array, p: number): [n: number, p: number] {
+	let num = 0
+	let shift = 0
+	while (true) {
+		const byt = buf[p++]
+		num |= (byt & 0x7f) << shift
+		if (byt >> 7 === 0) {
+			break
+		} else {
+			shift += 7
+		}
+	}
+	return [num, p]
+}
+
+export function locate_section(binary: Uint8Array, section: number): [p: number, found: boolean] {
+	let im_found = false
+	let im = 8 // skip magic and version
+	while (im < binary.length) {
+		if (binary[im] === section) {
+			im_found = true
+			break
+		}
+		im++
+
+		const [n, imp] = u32p(binary, im)
+		im = imp + n
+	}
+
+	return [im, im_found]
+}
+
+
 export function adjust_imported_shared_memory(binary: Uint8Array, needle: string, shared: boolean) {
 	// the import section is near the start, no need to step over the entire binary
 	// indexOf doesn't work on Uint8Array

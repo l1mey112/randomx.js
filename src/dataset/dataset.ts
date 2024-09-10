@@ -1,5 +1,5 @@
 import { env_npf_putc } from '../printf/printf'
-import { adjust_imported_shared_memory, locate_import } from '../wasm_prefix'
+import { adjust_imported_shared_memory } from '../wasm_prefix'
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
 
@@ -14,7 +14,7 @@ export type Cache = {
 	thunk: Uint8Array // WASM JIT code
 }
 
-export async function create_module(is_shared: boolean): Promise<[WebAssembly.Memory, DatasetModule]> {
+async function create_module(is_shared: boolean): Promise<[WebAssembly.Memory, DatasetModule]> {
 	adjust_imported_shared_memory(wasm, '\x03env\x06memory', is_shared) // patch in place
 
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
@@ -31,7 +31,7 @@ export async function create_module(is_shared: boolean): Promise<[WebAssembly.Me
 	return [memory, exports]
 }
 
-export function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): Cache {
+function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): Cache {
 	const jit_begin = exports.b()
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
@@ -45,30 +45,15 @@ export function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: D
 	}
 }
 
-export async function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: { shared?: boolean, do_block?: boolean } | undefined | null): Promise<Cache> {
+export async function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: { shared?: boolean } | undefined | null): Promise<Cache> {
 	K ??= new Uint8Array()
 
 	if (K.length > 60) {
 		throw new Error('Key length is too long (max 60 bytes)')
 	}
 
-	if (conf?.do_block!!) {
-		const [memory, exports] = await create_module(!!conf?.shared)
-		return initialise(K, memory, exports)
-	} else {
-		return new Promise((res, rej) => {
-			const worker = new Worker('./cache_worker.ts')
-			worker.postMessage(K)
-			worker.onmessage = (event: MessageEvent<Cache>) => {
-				res(event.data)
-				worker.terminate()
-			}
-			worker.onerror = (event: ErrorEvent) => {
-				rej(event.error)
-				worker.terminate()
-			}
-		})
-	}
+	const [memory, exports] = await create_module(!!conf?.shared)
+	return initialise(K, memory, exports)
 }
 
 type SuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]

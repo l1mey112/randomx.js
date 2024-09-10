@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { locate_import } from '../src/wasm_prefix'
+import { locate_import, locate_section, u32p } from '../src/wasm_prefix'
 
 // will patch wasm binaries that import memory with an unlimited growable limit to a non-growable limit
 
@@ -46,35 +46,10 @@ if (binary[p] !== 0x00) {
 	process.exit(0)
 }
 
-function u32p(buf: Uint8Array, p: number): [n: number, p: number] {
-	let num = 0
-	let shift = 0
-	while (true) {
-		const byt = buf[p++]
-		num |= (byt & 0x7f) << shift
-		if (byt >> 7 === 0) {
-			break
-		} else {
-			shift += 7
-		}
-	}
-	return [num, p]
-}
 
 // find import section
 
-let im_found = false
-let im = 8 // skip magic and version
-while (im < binary.length) {
-	if (binary[im] === 0x02) {
-		im_found = true
-		break
-	}
-	im++
-
-	const [n, imp] = u32p(binary, im)
-	im = imp + n
-}
+let [im, im_found] = locate_section(binary, 0x02)
 
 if (!im_found) {
 	console.error('import section not found')
