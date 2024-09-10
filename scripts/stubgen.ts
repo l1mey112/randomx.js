@@ -17,8 +17,6 @@ if (!file_wasm) {
 	process.exit(1)
 }
 
-const obj = await $`wasm-objdump --section-offsets -d ${file_wasm}`.text()
-
 // 000002 func[0] <umul128hi64>:
 //  000003: 03 7e                      | local[2..4] type=i64
 //  000005: 20 01                      | local.get 1
@@ -29,9 +27,8 @@ const obj = await $`wasm-objdump --section-offsets -d ${file_wasm}`.text()
 // find func[*] <the_function>:
 // extract all lines until end
 
+const obj = await $`wasm-objdump --section-offsets -d ${file_wasm}`.text()
 const funcs = obj.matchAll(new RegExp(/func\[\d+\] <(\w+)>:[\s\S]+?end/g))
-
-const name_cmd_obj = await $`wasm-objdump -x --section=name ${file_wasm}`.nothrow().text()
 
 // Custom:
 //  - name: "name"
@@ -41,9 +38,15 @@ const name_cmd_obj = await $`wasm-objdump -x --section=name ${file_wasm}`.nothro
 //  - func[0] local[2] <r0>
 //  .......................
 
-let local_names_on_function: string[][] = []
+// Global[1]:
+//  - global[0] i32 mutable=0 <P_value> - init i32=0
 
+const name_cmd_obj = await $`wasm-objdump -x ${file_wasm}`.nothrow().text()
 const local_names_obj = name_cmd_obj.matchAll(new RegExp(/func\[(\d+)\] local\[(\d+)\] <(\w+)>/g))
+const global_names_obj = name_cmd_obj.matchAll(new RegExp(/global\[(\d+)\] (\w+) mutable=\d+ <(\w+)>/g))
+
+let local_names_on_function: string[][] = []
+let global_names_with_type: Map<string, string> = new Map()
 
 for (const local_name of local_names_obj) {
 	const [_, func, local, name] = local_name
@@ -53,6 +56,11 @@ for (const local_name of local_names_obj) {
 	}
 
 	local_names_on_function[+func][+local] = name
+}
+
+for (const global_name of global_names_obj) {
+	const [_0, _1, type, name] = global_name
+	global_names_with_type.set(name, type)
 }
 
 console.log('#pragma once')
@@ -131,6 +139,19 @@ for (const func of funcs) {
 			}
 		}
 
+		if (comment.startsWith('global.get')) {
+			// global.get 0 <P_value>
+
+			const param = comment.match(/<(\w+)>/)
+			if (param) {
+				const param_name = param[1]
+				const global_type = global_names_with_type.get(param_name)
+				if (global_type == 'i32') {
+					hex[hex.length - 1] = `F(${hex[hex.length - 1]})`
+				}
+			}
+		}
+
 		if (comment.startsWith('local[')) {
 			local_entries += 1
 		}
@@ -145,7 +166,6 @@ for (const func of funcs) {
 		console.error('      you probably have too many anyway')
 		process.exit(1)
 	}
-
 
 	// have locals if name custom section
 	if (local_names_on_function[i]) {
