@@ -11,14 +11,20 @@ type DatasetModule = {
 // can be shared between threads safely if shared memory is enabled
 export type Cache = {
 	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
-	thunk: Uint8Array // WASM JIT code
+	thunk: WebAssembly.Module // WASM JIT code
 }
 
-async function create_module(is_shared: boolean): Promise<[WebAssembly.Memory, DatasetModule]> {
+export type CacheModule = {
+	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
+	exports: DatasetModule
+}
+
+function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] {
 	adjust_imported_shared_memory(wasm, '\x03env\x06memory', is_shared) // patch in place
 
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
-	const module = await WebAssembly.instantiate(wasm, {
+	const wm = new WebAssembly.Module(wasm)
+	const wi = new WebAssembly.Instance(wm, {
 		e: {
 			ch: env_npf_putc
 		},
@@ -27,7 +33,7 @@ async function create_module(is_shared: boolean): Promise<[WebAssembly.Memory, D
 		},
 	})
 
-	const exports = module.instance.exports as DatasetModule
+	const exports = wi.exports as DatasetModule
 	return [memory, exports]
 }
 
@@ -41,33 +47,52 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 
 	return {
 		memory,
-		thunk: jit_buffer
+		thunk: new WebAssembly.Module(jit_buffer)
 	}
 }
 
-export async function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: { shared?: boolean } | undefined | null): Promise<Cache> {
+type CacheOptions = { shared?: boolean }
+
+export function randomx_cache(conf?: CacheOptions | undefined | null): CacheModule {
+	const [memory, exports] = create_module(!!conf?.shared)
+	return {
+		memory,
+		exports
+	}
+}
+
+export function randomx_construct_cache(K: Uint8Array | undefined | null, module: CacheModule): Cache
+export function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache
+
+export function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null | CacheModule): Cache {
 	K ??= new Uint8Array()
 
 	if (K.length > 60) {
 		throw new Error('Key length is too long (max 60 bytes)')
 	}
 
-	const [memory, exports] = await create_module(!!conf?.shared)
-	return initialise(K, memory, exports)
+	if (conf && 'exports' in conf) {
+		const cache = conf as CacheModule
+		return initialise(K, cache.memory, cache.exports)
+	} else {
+		const [memory, exports] = create_module(!!conf?.shared)
+		return initialise(K, memory, exports)
+	}
 }
 
-type SuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
-type SuperscalarHashModule = {
-	d: SuperscalarHash
-}
+export type SuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
-export async function randomx_superscalarhash(cache: Cache): Promise<SuperscalarHash> {
-	const module = await WebAssembly.instantiate(cache.thunk, {
+export function randomx_superscalarhash(cache: Cache): SuperscalarHash {
+	const wi = new WebAssembly.Instance(cache.thunk, {
 		e: {
 			m: cache.memory
 		}
 	})
 
-	const exports = module.instance.exports as SuperscalarHashModule
+	type SuperscalarHashModule = {
+		d: SuperscalarHash
+	}
+
+	const exports = wi.exports as SuperscalarHashModule
 	return exports.d
 }
