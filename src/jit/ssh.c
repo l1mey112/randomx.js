@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "jit.h"
 #include "ssh.h"
 #include "ssh_internal.h"
 #include "freestanding.h"
@@ -116,10 +117,6 @@ decode_group_t fetch_next(blake2b_generator_state *S, ss_inst_kind_t kind, int c
 	return next_group[blake2b_generator_u8(S) & 3];
 }
 
-static inline bool is_zero_or_power_of_2(uint64_t x) {
-	return (x & (x - 1)) == 0;
-}
-
 static bool is_mul(ss_inst_kind_t kind) {
 	switch (kind) {
 	case SS_IMUL_R:
@@ -188,7 +185,7 @@ ss_inst_desc_t create(blake2b_generator_state *S, ss_inst_kind_t kind) {
 	case SS_IMUL_RCP:
 		do {
 			desc.imm32 = blake2b_generator_u32(S);
-		} while (is_zero_or_power_of_2(desc.imm32));
+		} while (POWER_OF_ZERO_OR_TWO(desc.imm32));
 		desc.op_group = SS_IMUL_RCP;
 		desc.op_group_par = -1;
 		break;

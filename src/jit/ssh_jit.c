@@ -1,5 +1,6 @@
 #include "configuration.h"
 #include "inst.h"
+#include "jit.h"
 #include "ssh.h"
 #include "wasm_jit.h"
 
@@ -90,7 +91,6 @@ uint32_t ssh_imul_r(SSH_JIT_PARAMS) {
 
 uint32_t ssh_iror_c(SSH_JIT_PARAMS) {
 	THUNK_BEGIN
-	// Performs a cyclic shift (rotation) of the destination register. Source operand (shift count) is implicitly masked to 6 bits. IROR rotates bits right, IROL left.
 
 	// (local.set $dest (i64.rotr (local.get $dest) (i64.const $imm)))
 	WASM_U8_THUNK({
@@ -175,18 +175,10 @@ uint32_t ssh_ismulh_r(SSH_JIT_PARAMS) {
 	THUNK_END
 }
 
-uint64_t randomx_reciprocal(uint32_t divisor) {
-	uint64_t p2exp63 = 1ULL << 63;
-	uint64_t q = p2exp63 / divisor;
-	uint64_t r = p2exp63 % divisor;
-	int32_t shift = 64 - __builtin_clzll(divisor);
-	return (q << shift) + ((r << shift) / divisor);
-}
-
 uint32_t ssh_imul_rcp(SSH_JIT_PARAMS) {
 	THUNK_BEGIN
 
-	uint64_t reciprocal = randomx_reciprocal(inst->imm32);
+	uint64_t reciprocal = jit_reciprocal(inst->imm32);
 
 	// (local.set $dest (i64.mul (local.get $dest) (i64.const $imm_rcp)))
 	WASM_U8_THUNK({
@@ -331,7 +323,7 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 	THUNK_END
 }
 
-uint32_t ssh_jit(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache, uint8_t *buf) {
+uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf) {
 	uint8_t *p = buf;
 
 	WASM_MAGIC();
@@ -407,7 +399,7 @@ uint32_t ssh_jit(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache, uint
 		WASM_U32_PATCH({
 			WASM_STUB(STUB_SSH_MAIN);
 
-			p += ssh_jit_programs(prog, cache, p);
+			p += ssh_jit_programs(prog, cache_ptr, p);
 
 			WASM_STUB(STUB_SSH_MAIN_1);
 		});

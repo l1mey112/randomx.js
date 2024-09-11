@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { buffer, module }  from './harness'
-import { randomx_cache, randomx_construct_cache, randomx_superscalarhash } from '../src/dataset/dataset'
+import { randomx_alloc_cache, randomx_init_cache, randomx_superscalarhash } from '../src/dataset/dataset'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
@@ -29,7 +29,7 @@ test('chained programs', () => {
 })
 
 test('dataset initialisation', () => {
-	const cache = randomx_construct_cache(new TextEncoder().encode('test key 000'))
+	const cache = randomx_init_cache(new TextEncoder().encode('test key 000'))
 	const hash = randomx_superscalarhash(cache)
 
 	const dataset_items_0 = hash(0n)
@@ -44,10 +44,10 @@ test('dataset initialisation', () => {
 })
 
 test('arraybuffers', () => {
-	let n = randomx_cache({ shared: true })
+	let n = randomx_alloc_cache({ shared: true })
 	expect(n.memory.buffer).toBeInstanceOf(SharedArrayBuffer)
-	n = randomx_cache({ shared: false })
+	n = randomx_alloc_cache({ shared: false })
 	expect(n.memory.buffer).not.toBeInstanceOf(SharedArrayBuffer)
-	n = randomx_cache()
+	n = randomx_alloc_cache()
 	expect(n.memory.buffer).not.toBeInstanceOf(SharedArrayBuffer)
 })

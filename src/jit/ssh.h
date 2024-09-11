@@ -7,6 +7,8 @@
 #include "configuration.h"
 #include "inst.h"
 
+#define SUPERSCALAR_MAX_SIZE (3 * RANDOMX_SUPERSCALAR_LATENCY + 2)
+
 typedef struct ss_program_t ss_program_t;
 typedef struct rx_inst_t rx_inst_t;
 typedef enum ss_inst_kind_t ss_inst_kind_t;

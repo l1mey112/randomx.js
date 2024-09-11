@@ -17,14 +17,3 @@ export const RANDOMX_JUMP_OFFSET = 8                // Jump condition mask offse
 export const RANDOMX_SCRATCHPAD_L3 = 2097152        // Scratchpad L3 size in bytes
 export const RANDOMX_SCRATCHPAD_L2 = 262144         // Scratchpad L2 size in bytes
 export const RANDOMX_SCRATCHPAD_L1 = 16384          // Scratchpad L1 size in bytes
-
-export const SUPERSCALAR_MAX_SIZE = (3 * RANDOMX_SUPERSCALAR_LATENCY + 2)
-
-export type Feature =
-	| 0 // JS + WASM + SIMD + BULK MEMORY
-	| 1 // JS + WASM + SIMD + BULK MEMORY + WORKING FMA
-
-export const FEATURE_SIMD = 0
-export const FEATURE_FMA = 1
-
-export const H_BUFFER_SIZE = 1024 // 1 KiB for hash input and output

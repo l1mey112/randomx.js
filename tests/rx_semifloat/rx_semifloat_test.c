@@ -152,18 +152,10 @@ static unsigned fp_heap_count[FCOUNT] = {};
 
 #define TIMEIT(v, f)                                                            \
 	do {                                                                        \
-		rdtsc();                                                                \
-		rdtsc();                                                                \
-		rdtsc();                                                                \
 		uint32_t rdtsc_base = rdtsc_overhead();                                 \
-		rdtsc();                                                                \
-		rdtsc();                                                                \
 		uint32_t start = rdtsc();                                               \
 		f;                                                                      \
 		uint32_t end = rdtsc();                                                 \
-		rdtsc();                                                                \
-		rdtsc();                                                                \
-		rdtsc();                                                                \
 		int32_t ncycles = (int32_t)(end - start) - rdtsc_base;                  \
 		running_avg_update(&fp_heap_running_avg[v], ncycles < 0 ? 0 : ncycles); \
 	} while (0)
@@ -192,6 +184,8 @@ static unsigned fp_heap_count[FCOUNT] = {};
 
 #define ITERATION_COUNT 50000
 
+volatile v128_t _out;
+
 #define RUNFOR_V(fn, heap)                                                    \
 	p = HEAP_##heap, endp = p + sizeof(HEAP_##heap) / sizeof(HEAP_##heap[0]); \
 	while (p != endp) {                                                       \
@@ -209,7 +203,7 @@ static unsigned fp_heap_count[FCOUNT] = {};
 	for (unsigned c = 0; c < ITERATION_COUNT; c++) {                          \
 		v128_t v = wasm_f64x2_make(p->x0, p->x1);                             \
 		v128_t w = wasm_f64x2_make(p->y0, p->y1);                             \
-		TIMEIT(heap, { fn(v, w); });                                          \
+		TIMEIT(heap, { _out = fn(v, w); });                                   \
 		if (++p == endp) {                                                    \
 			p = HEAP_##heap;                                                  \
 		}                                                                     \
@@ -230,7 +224,7 @@ static unsigned fp_heap_count[FCOUNT] = {};
 	p = HEAP_##heap, endp = p + sizeof(HEAP_##heap) / sizeof(HEAP_##heap[0]); \
 	for (unsigned c = 0; c < ITERATION_COUNT; c++) {                          \
 		v128_t v = wasm_f64x2_make(p->x0, p->x1);                             \
-		TIMEIT(heap, { fn(v); });                                             \
+		TIMEIT(heap, { _out = fn(v); });                                      \
 		if (++p == endp) {                                                    \
 			p = HEAP_##heap;                                                  \
 		}                                                                     \

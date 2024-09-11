@@ -36,7 +36,7 @@ uint32_t init_new_key(uint32_t key_length) {
 		ssh_generate(S, &programs[i]);
 	}
 
-	uint32_t wasm_size = ssh_jit(programs, cache, jit_buffer);
+	uint32_t wasm_size = jit_ssh(programs, cache, jit_buffer);
 
 	return wasm_size;
 }
