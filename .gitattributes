@@ -1,1 +1,3 @@
 *.h linguist-language=C
+include/nanoprintf.h linguist-vendored
+include/wasm_simd128_polyfill.h linguist-vendored
