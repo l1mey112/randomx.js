@@ -1,4 +1,4 @@
-#define RANDOMX_SCRATCHPAD_MASK      (RANDOMX_SCRATCHPAD_L3-64)
+;; #define RANDOMX_SCRATCHPAD_MASK      (RANDOMX_SCRATCHPAD_L3-64)
 
 (module
 	(memory 0)
@@ -25,33 +25,36 @@
 			;; 2.
 			;; extract out mx and also mask by L3 scratchpad
 			local.get $ma_mx
-			i64.const RANDOMX_SCRATCHPAD_MASK ;; 0x00000000FFFFFFFF
+			i64.const 0;;RANDOMX_SCRATCHPAD_MASK ;; 0x00000000FFFFFFFF
 			i64.and
 			local.set $tmp
-			(local.set $r0 (i32.xor (local.get $r0) (i32.load offset=0 (local.get $tmp)))
-			(local.set $r1 (i32.xor (local.get $r1) (i32.load offset=8 (local.get $tmp)))
-			(local.set $r2 (i32.xor (local.get $r2) (i32.load offset=16 (local.get $tmp)))
-			(local.set $r3 (i32.xor (local.get $r3) (i32.load offset=24 (local.get $tmp)))
-			(local.set $r4 (i32.xor (local.get $r4) (i32.load offset=32 (local.get $tmp)))
-			(local.set $r5 (i32.xor (local.get $r5) (i32.load offset=40 (local.get $tmp)))
-			(local.set $r6 (i32.xor (local.get $r6) (i32.load offset=48 (local.get $tmp)))
-			(local.set $r7 (i32.xor (local.get $r7) (i32.load offset=56 (local.get $tmp)))
+			(local.set $r0 (i32.xor (local.get $r0) (i32.load offset=0 (local.get $tmp))))
+			(local.set $r1 (i32.xor (local.get $r1) (i32.load offset=8 (local.get $tmp))))
+			(local.set $r2 (i32.xor (local.get $r2) (i32.load offset=16 (local.get $tmp))))
+			(local.set $r3 (i32.xor (local.get $r3) (i32.load offset=24 (local.get $tmp))))
+			(local.set $r4 (i32.xor (local.get $r4) (i32.load offset=32 (local.get $tmp))))
+			(local.set $r5 (i32.xor (local.get $r5) (i32.load offset=40 (local.get $tmp))))
+			(local.set $r6 (i32.xor (local.get $r6) (i32.load offset=48 (local.get $tmp))))
+			(local.set $r7 (i32.xor (local.get $r7) (i32.load offset=56 (local.get $tmp))))
 
 			;; 3.
 			;; extract out ma and also mask by L3 scratchpad
 			local.get $ma_mx
-			i64.shr_u 32
-			i64.const RANDOMX_SCRATCHPAD_MASK ;; 0x00000000FFFFFFFF
+			i64.const 32
+			i64.shr_u
+			i64.const 0;;RANDOMX_SCRATCHPAD_MASK ;; 0x00000000FFFFFFFF
 			i64.and
 			local.set $tmp
 
 			;; register group F: load i32 bit value, convert to double (over two element v128)
 
 			;; https://nemequ.github.io/waspr/instructions/f64x2.convert_low_i32x4_s
-			(local.set $f0 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=0 (local.get $tmp) (v128.const 0) 0)))
-			(local.set $f1 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=8 (local.get $tmp) (v128.const 0) 0)))
-			(local.set $f2 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=16 (local.get $tmp) (v128.const 0) 0)))
-			(local.set $f3 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=24 (local.get $tmp) (v128.const 0) 0)))
+			;; https://github.com/WebAssembly/design/issues/1476 - not adding in an instruction for v128.const_zero is insanity
+
+			(local.set $f0 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=0 0 (local.get $tmp) (v128.const i64x2 0 0))))
+			(local.set $f1 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=8 0 (local.get $tmp) (v128.const i64x2 0 0))))
+			(local.set $f2 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=16 0 (local.get $tmp) (v128.const i64x2 0 0))))
+			(local.set $f3 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=24 0 (local.get $tmp) (v128.const i64x2 0 0))))
 
 			;; AND and OR with emask
 			;;(local.set $e0 (f64x2.convert_low_i32x4_s (v128.load64_lane offset=0 (local.get $tmp) (v128.const 0) 0)))

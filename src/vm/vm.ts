@@ -1,18 +1,20 @@
 import type { Cache } from '../dataset/dataset'
+import { jit_detect, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
 import wasm from './vm.wasm'
 
 let _wasm: WebAssembly.Module | null = null
+const _feature: JitFeature = jit_detect()
 
 // new virtual machine
 export function randomx_create_vm(cache: Cache) {
 	type VmModule = {
 		memory: WebAssembly.Memory
-	
-		b(): number
-		I(): number
-		H(data_length: number): number
-		R(): void
+
+		i(feature: JitFeature): number // returns scratch buffer
+		I(): void                      // 1. start hash install
+		H(data_length: number): number // 2. hash data
+		R(): void                      // 3. end hash install, compute hash
 	}
 
 	if (!_wasm) {
@@ -31,7 +33,7 @@ export function randomx_create_vm(cache: Cache) {
 	const SCRATCH_SIZE = 1024 * 8
 
 	const exports = wi.exports as VmModule
-	const scratch_ptr = exports.b()
+	const scratch_ptr = exports.i(_feature)
 	const scratch = new Uint8Array(exports.memory.buffer, scratch_ptr, SCRATCH_SIZE)
 
 	// install seed S from H

@@ -1,25 +1,31 @@
-import { FEATURE_FMA, FEATURE_SIMD, type Feature } from '../../include/configuration'
 import fma from './fma.wasm'
 import simd from './simd.wasm'
 
-export async function detect(): Promise<Feature> {
+export type JitFeature = number
+
+export const JIT_BASELINE = 0 // SIMD and bulk memory instructions
+export const JIT_RELAXED_SIMD = 1 // relaxed SIMD instructions
+export const JIT_FMA = 2 // working fused multiply-add (assumes JIT_RELAXED_SIMD)
+
+export function jit_detect(): JitFeature {
 	try {
 		if (!WebAssembly.validate(simd)) {
 			throw null
 		}
 	} catch {
-		throw new Error('no WASM, SIMD, ATOMICS, or BULK MEMORY')
+		throw new Error('WebAssembly not available, or SIMD and bulk memory not supported. randomx.js requires these baseline features to run')
 	}
 
 	try {
-		const t = await WebAssembly.instantiate(fma)
+		const wm = new WebAssembly.Module(fma)
+		const wi = new WebAssembly.Instance(wm)
 
-		if (!!(t.instance.exports.d as CallableFunction)()) {
-			return FEATURE_FMA // WORKING FMA
+		if (!!(wi.exports.d as CallableFunction)()) {
+			return JIT_FMA | JIT_RELAXED_SIMD // working FMA
 		} else {
-			return FEATURE_SIMD // no WORKING FMA
+			return JIT_RELAXED_SIMD // no working FMA
 		}
 	} catch {
-		return FEATURE_SIMD // no RELAXED SIMD
+		return JIT_BASELINE // no relaxed SIMD
 	}
 }

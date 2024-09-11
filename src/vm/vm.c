@@ -3,17 +3,20 @@
 #include "aes/aes.h"
 #include "blake2b/blake2b.h"
 #include "vm/vm.h"
+#include "jit/jit.h"
 
 #include <stdint.h>
 
 uint8_t H_buffer[1024 * 8];
+jit_feature_t jit_feature;
 
 blake2b_state *SS; // seed state
 
 uint8_t scratchpad[RANDOMX_SCRATCHPAD_L3];
 
-WASM_EXPORT("b")
-void *get_input_buffer() {
+WASM_EXPORT("i")
+void *init(uint8_t f) {
+	jit_feature = f;
 	return H_buffer;
 }
 
