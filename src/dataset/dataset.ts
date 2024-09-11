@@ -20,6 +20,7 @@ export type CacheModule = {
 }
 
 function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] {
+	// we cannot cache this module because we need to adjust the memory import
 	adjust_imported_shared_memory(wasm, '\x03env\x06memory', is_shared) // patch in place
 
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
@@ -53,7 +54,7 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 
 type CacheOptions = { shared?: boolean }
 
-export function randomx_cache(conf?: CacheOptions | undefined | null): CacheModule {
+export function randomx_alloc_cache(conf?: CacheOptions | undefined | null): CacheModule {
 	const [memory, exports] = create_module(!!conf?.shared)
 	return {
 		memory,
@@ -61,10 +62,10 @@ export function randomx_cache(conf?: CacheOptions | undefined | null): CacheModu
 	}
 }
 
-export function randomx_construct_cache(K: Uint8Array | undefined | null, module: CacheModule): Cache
-export function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache
+export function randomx_init_cache(K: Uint8Array | undefined | null, module: CacheModule): Cache
+export function randomx_init_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache
 
-export function randomx_construct_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null | CacheModule): Cache {
+export function randomx_init_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null | CacheModule): Cache {
 	K ??= new Uint8Array()
 
 	if (K.length > 60) {
