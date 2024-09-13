@@ -23,12 +23,12 @@ struct rx_program_t {
 };
 
 struct rx_vm_t {
-	uint64_t r[8];
-	f64x2_t f[4];
-	f64x2_t e[4];
-	f64x2_t a[4];
+	alignas(16) uint64_t r[8];
+	alignas(16) f64x2_t f[4];
+	alignas(16) f64x2_t e[4];
+	alignas(16) f64x2_t a[4];
 
-	uint64_t emask[2];
+	alignas(16) uint64_t emask[2];
 
 	uint32_t read_reg0;
 	uint32_t read_reg1;
@@ -41,7 +41,4 @@ struct rx_vm_t {
 	uint64_t dataset_offset;
 };
 
-alignas(16) extern rx_program_t P;
-alignas(16) extern rx_vm_t VM;
-
-void execute_vm();
+void vm_program(rx_vm_t *VM, const rx_program_t *P);

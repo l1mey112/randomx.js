@@ -301,6 +301,8 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 	for (int i = 0; i < RANDOMX_CACHE_ACCESSES; i++) {
 		ss_program_t *ith_program = &prog[i];
 
+		// TODO: compose this into a function instead to take use of uOP cache
+
 		// SuperscalarHash[i](r0, r1, r2, r3, r4, r5, r6, r7)
 		for (unsigned j = 0; j < ith_program->size; j++) {
 			rx_inst_t *inst = &ith_program->instructions[j];
@@ -398,7 +400,7 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 
 		// function 0
 		WASM_U32_PATCH({
-			WASM_U8(2); // locals entries = vec(2)
+			WASM_U8(2); // local entries = vec(2)
 
 			WASM_U8(1);             // 1 local variable of type i32
 			WASM_U8(WASM_TYPE_I32); // $mixblock_ptr

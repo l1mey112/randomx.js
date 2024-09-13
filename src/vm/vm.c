@@ -34,6 +34,9 @@ uint8_t S[64];  // 512-bit seed - state of the generator gen4
 alignas(16) rx_program_t P; // program buffer
 alignas(16) rx_vm_t VM;
 
+// TODO: figure out how big this should be
+uint8_t jit_buffer[128 * 1024];
+
 WASM_EXPORT("R")
 void finalise_hash() {
 	blake2b_finalise(SS, S);
@@ -41,9 +44,11 @@ void finalise_hash() {
 	// S now contains the seed
 	fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
 
-	for (int chain = 0; chain < RANDOMX_PROGRAM_COUNT - 1; ++chain) {
-		// program generation
-		fillAes4Rx4(S, sizeof(P), (void *)&P);
-		execute_vm();
+	for (int chain = 0; chain < RANDOMX_PROGRAM_COUNT - 1; chain++) {
+		fillAes4Rx4(S, sizeof(P), (void *)&P); // program generation
+
+		vm_program(&VM, &P);
+		uint32_t jit_length = jit_vm(&VM, &P, jit_buffer);
+		// TODO: will need to return to caller to invoke JIT code
 	}
 }

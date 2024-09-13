@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-uint32_t jit_vm(uint8_t *buf) {
+uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *buf) {
 	THUNK_BEGIN
 
 	WASM_MAGIC();
@@ -53,6 +53,15 @@ uint32_t jit_vm(uint8_t *buf) {
 	// import 0: e.d - function index 0
 	// (all other function idxs are shifted by 1, amount of imports)
 
+	// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcsec
+	WASM_SECTION(WASM_SECTION_FUNCTION, {
+		WASM_U8_THUNK({
+			1, // functions = vec(1)
+
+			0, // type = 0
+		});
+	});
+
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-exportsec
 	WASM_SECTION(WASM_SECTION_EXPORT, {
 		WASM_U8_THUNK({
@@ -64,4 +73,17 @@ uint32_t jit_vm(uint8_t *buf) {
 			1,      // function index = 1
 		});
 	});
+
+	// https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec
+	WASM_SECTION(WASM_SECTION_CODE, {
+		WASM_U8(1); // functions = vec(1)
+
+		// function 0
+		WASM_U32_PATCH({
+			WASM_U8(0); // local entries = vec(0)
+			WASM_U8(0x0B); // end
+		});
+	});
+
+	THUNK_END
 }

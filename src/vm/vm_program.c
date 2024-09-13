@@ -1,11 +1,8 @@
 #include "configuration.h"
 #include "freestanding.h"
-#include "aes/aes.h"
-#include "blake2b/blake2b.h"
 #include "vm/vm.h"
 
 #include <stdint.h>
-#include <wasm_simd128.h>
 
 const int mantissa_size = 52;
 const int exponent_size = 11;
@@ -39,31 +36,27 @@ static inline uint64_t get_float_mask(uint64_t entropy) {
 	return (entropy & mask_22bit) | get_static_exponent(entropy);
 }
 
-void program_vm() {
-	VM.a[0].lo = get_small_positive_float_bits(P.entropy[0]);
-	VM.a[0].hi = get_small_positive_float_bits(P.entropy[1]);
-	VM.a[1].lo = get_small_positive_float_bits(P.entropy[2]);
-	VM.a[1].hi = get_small_positive_float_bits(P.entropy[3]);
-	VM.a[2].lo = get_small_positive_float_bits(P.entropy[4]);
-	VM.a[2].hi = get_small_positive_float_bits(P.entropy[5]);
-	VM.a[3].lo = get_small_positive_float_bits(P.entropy[6]);
-	VM.a[3].hi = get_small_positive_float_bits(P.entropy[7]);
-	VM.ma = P.entropy[8] & ((RANDOMX_DATASET_BASE_SIZE - 1) & ~(64 - 1));
-	VM.mx = P.entropy[10];
-	uint64_t addr_registers = P.entropy[12];
-	VM.read_reg0 = 0 + (addr_registers & 1);
+void vm_program(rx_vm_t *VM, const rx_program_t *P) {
+	VM->a[0].lo = get_small_positive_float_bits(P->entropy[0]);
+	VM->a[0].hi = get_small_positive_float_bits(P->entropy[1]);
+	VM->a[1].lo = get_small_positive_float_bits(P->entropy[2]);
+	VM->a[1].hi = get_small_positive_float_bits(P->entropy[3]);
+	VM->a[2].lo = get_small_positive_float_bits(P->entropy[4]);
+	VM->a[2].hi = get_small_positive_float_bits(P->entropy[5]);
+	VM->a[3].lo = get_small_positive_float_bits(P->entropy[6]);
+	VM->a[3].hi = get_small_positive_float_bits(P->entropy[7]);
+	VM->ma = P->entropy[8] & ((RANDOMX_DATASET_BASE_SIZE - 1) & ~(64 - 1));
+	VM->mx = P->entropy[10];
+	uint64_t addr_registers = P->entropy[12];
+	VM->read_reg0 = 0 + (addr_registers & 1);
 	addr_registers >>= 1;
-	VM.read_reg1 = 2 + (addr_registers & 1);
+	VM->read_reg1 = 2 + (addr_registers & 1);
 	addr_registers >>= 1;
-	VM.read_reg2 = 4 + (addr_registers & 1);
+	VM->read_reg2 = 4 + (addr_registers & 1);
 	addr_registers >>= 1;
-	VM.read_reg3 = 6 + (addr_registers & 1);
+	VM->read_reg3 = 6 + (addr_registers & 1);
 
-	VM.dataset_offset = (P.entropy[13] % (RANDOMX_DATASET_EXTRA_SIZE / 64 + 1)) * 64;
-	VM.emask[0] = get_float_mask(P.entropy[14]);
-	VM.emask[1] = get_float_mask(P.entropy[15]);
-}
-
-void execute_vm() {
-	program_vm();
+	VM->dataset_offset = (P->entropy[13] % (RANDOMX_DATASET_EXTRA_SIZE / 64 + 1)) * 64;
+	VM->emask[0] = get_float_mask(P->entropy[14]);
+	VM->emask[1] = get_float_mask(P->entropy[15]);
 }
