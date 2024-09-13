@@ -65,7 +65,7 @@ uint32_t iterate_vm() {
 
 	fillAes4Rx4(S, sizeof(P), (void *)&P); // program generation
 	vm_program(&VM, &P);
-	return jit_vm(&VM, &P, jit_buffer);
+	return jit_vm(&VM, &P, scratchpad, jit_buffer);
 }
 
 void final_vm_iteration();
