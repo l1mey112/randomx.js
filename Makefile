@@ -1,10 +1,14 @@
 H_SOURCES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
 
+WAT_SOURCES := $(shell find . -type f -name '*.wat' -not -path './node_modules/*')
+WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
+
 JIT_STUBS_C_SOURCES := $(shell find src/jit/stubs -type f -name '*.c')
 JIT_STUBS_H_SOURCES := $(subst .c,.h,$(JIT_STUBS_C_SOURCES))
 
 H_SOURCES += include/configuration.h
 H_SOURCES += $(JIT_STUBS_H_SOURCES)
+H_SOURCES += $(WAT_WASM_FILES)
 
 PRINTF_C_SOURCES := $(shell find src/printf -type f -name '*.c')
 BLAKE2B_C_SOURCES := $(shell find src/blake2b -type f -name '*.c') $(PRINTF_C_SOURCES)
@@ -54,6 +58,9 @@ include/configuration.h: include/configuration.ts
 	sed '/export const/ { s/export const /#define /; s/ = / /; s/;//; }; /^\/\// { s/^\/\///; }; /^#/!d' $< > $@
 
 GIT_HASH := $(shell git log -1 --format=%h)
+
+%.wasm: %.wat
+	wat2wasm --enable-all $< -o $@
 
 # FP heap is so fucking large that it only makes sense to compile with TCC
 # don't even bother with optimisations on
