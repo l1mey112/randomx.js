@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <wasm_simd128.h>
 
-
 const int mantissa_size = 52;
 const int exponent_size = 11;
 const uint64_t mantissa_mask = (1ULL << mantissa_size) - 1;

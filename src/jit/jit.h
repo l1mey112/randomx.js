@@ -3,11 +3,11 @@
 #include <stdint.h>
 
 uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf);
-uint64_t jit_reciprocal(uint32_t divisor);
-
-#define POWER_OF_ZERO_OR_TWO(x) ((x & (x - 1)) == 0)
+uint32_t jit_vm(uint8_t *buf);
 
 typedef enum jit_feature_t jit_feature_t;
+
+extern jit_feature_t jit_feature;
 
 // synonymous with `Feature` in `src/detect/detect.ts`
 enum jit_feature_t {
@@ -15,3 +15,7 @@ enum jit_feature_t {
 	JIT_RELAXED_SIMD = 1, // relaxed SIMD instructions
 	JIT_FMA = 2,          // working fused multiply-add (assumes JIT_RELAXED_SIMD)
 };
+
+uint64_t jit_reciprocal(uint32_t divisor);
+
+#define POWER_OF_ZERO_OR_TWO(x) ((x & (x - 1)) == 0)

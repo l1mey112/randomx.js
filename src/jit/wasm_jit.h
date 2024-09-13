@@ -30,19 +30,19 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 	} while (0)
 
 // >127 means 2+ bytes
-#define WASM_U32_0() WASM_U8(0x00)  // 00
-#define WASM_U32_1() WASM_U8(0x01)  // 01
-#define WASM_U32_2() WASM_U8(0x02)  // 02
-#define WASM_U32_3() WASM_U8(0x03)  // 03
-#define WASM_U32_4() WASM_U8(0x04)  // 04
-#define WASM_U32_5() WASM_U8(0x05)  // 05
-#define WASM_U32_6() WASM_U8(0x06)  // 06
-#define WASM_U32_7() WASM_U8(0x07)  // 07
-#define WASM_U32_8() WASM_U8(0x08)  // 08
-#define WASM_U32_9() WASM_U8(0x09)  // 09
-#define WASM_U32_10() WASM_U8(0x0a) // 0a
-#define WASM_U32_11() WASM_U8(0x0b) // 0b
-#define WASM_U32_12() WASM_U8(0x0c) // 0c
+//#define WASM_U32_0() WASM_U8(0x00)  // 00
+//#define WASM_U32_1() WASM_U8(0x01)  // 01
+//#define WASM_U32_2() WASM_U8(0x02)  // 02
+//#define WASM_U32_3() WASM_U8(0x03)  // 03
+//#define WASM_U32_4() WASM_U8(0x04)  // 04
+//#define WASM_U32_5() WASM_U8(0x05)  // 05
+//#define WASM_U32_6() WASM_U8(0x06)  // 06
+//#define WASM_U32_7() WASM_U8(0x07)  // 07
+//#define WASM_U32_8() WASM_U8(0x08)  // 08
+//#define WASM_U32_9() WASM_U8(0x09)  // 09
+//#define WASM_U32_10() WASM_U8(0x0a) // 0a
+//#define WASM_U32_11() WASM_U8(0x0b) // 0b
+//#define WASM_U32_12() WASM_U8(0x0c) // 0c
 
 #define WASM_TYPE_I32 0x7f
 #define WASM_TYPE_I64 0x7e
@@ -122,3 +122,9 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 #define WASM_SECTION_CODE 0x0A
 #define WASM_SECTION_DATA 0x0B
 #define WASM_SECTION_DATACOUNT 0x0C
+
+#define THUNK_BEGIN \
+	uint8_t *p = buf;
+
+#define THUNK_END \
+	return p - buf;

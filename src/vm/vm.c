@@ -8,7 +8,6 @@
 #include <stdint.h>
 
 uint8_t H_buffer[1024 * 8];
-jit_feature_t jit_feature;
 
 blake2b_state *SS; // seed state
 

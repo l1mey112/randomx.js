@@ -28,12 +28,6 @@ typedef uint32_t (*ssh_jit_fn)(SSH_JIT_PARAMS);
 // all instructions here are two-address basically x86 instructions
 // dest = dest op src
 
-#define THUNK_BEGIN \
-	uint8_t *p = buf;
-
-#define THUNK_END \
-	return p - buf;
-
 #define R(x) (x + $r0)
 
 uint32_t ssh_isub_r(SSH_JIT_PARAMS) {
@@ -245,7 +239,7 @@ uint32_t access_mix_block(uint8_t *buf, uint8_t *cache_ptr) {
 	// (local.set $mixblock_ptr v3)
 	WASM_U8_THUNK({
 		0x20, $item_number, // local.get $item_number
-		0x42,                        // i64.const
+		0x42,               // i64.const
 	});
 
 	WASM_I64(mask); // $mask
@@ -261,7 +255,7 @@ uint32_t access_mix_block(uint8_t *buf, uint8_t *cache_ptr) {
 	WASM_I64((uint32_t)cache_ptr); // $cache_ptr
 
 	WASM_U8_THUNK({
-		0x6a,                         // i32.add
+		0x6a,                // i32.add
 		0x21, $mixblock_ptr, // local.set $mixblock_ptr
 	});
 
@@ -281,10 +275,10 @@ uint32_t xor_mix_block(uint8_t *buf) {
 		// 7*8 = 56 < 127 meaning no special LEB128 encoding
 		WASM_U8_THUNK({
 			0x20, $mixblock_ptr, // local.get $mixblock_ptr
-			0x29, 2, i * 8,               // i64.load align=2 offset=i*8
-			0x20, R(i),                   // local.get $ri
-			0x85,                         // i64.xor
-			0x21, R(i),                   // local.set $ri
+			0x29, 2, i * 8,      // i64.load align=2 offset=i*8
+			0x20, R(i),          // local.get $ri
+			0x85,                // i64.xor
+			0x21, R(i),          // local.set $ri
 		});
 	}
 
@@ -324,7 +318,7 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 		// (local.set $item_number (local.get $r[ith_program->addr_reg]))
 		WASM_U8_THUNK({
 			0x20, R(ith_program->addr_reg), // local.get $r[ith_program->addr_reg]
-			0x21, $item_number,    // local.set $item_number
+			0x21, $item_number,             // local.set $item_number
 		});
 	}
 
@@ -332,7 +326,7 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 }
 
 uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf) {
-	uint8_t *p = buf;
+	THUNK_BEGIN
 
 	WASM_MAGIC();
 
@@ -366,16 +360,13 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-importsec
 	WASM_SECTION(WASM_SECTION_IMPORT, {
-		WASM_U8(1); // imports = vec(1)
-
-		// import 0: e.m
-		WASM_U32_NAME("e");
-		WASM_U32_NAME("m");
-
-		// TODO: shared memory
 		WASM_U8_THUNK({
-			0x02,   // memory
-			0x00, 0 // limit [0..]
+			1, // imports = vec(1)
+
+			// import 0: e.m
+			1, 'e', 1, 'm', // name = "e.m"
+			0x02,           // import kind = memory
+			0x00, 0,        // limit [0..]
 		});
 	});
 
@@ -391,12 +382,14 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-exportsec
 	WASM_SECTION(WASM_SECTION_EXPORT, {
-		WASM_U8(1); // exports = vec(1)
+		WASM_U8_THUNK({
+			1, // exports = vec(1)
 
-		// export 0: d
-		WASM_U32_NAME("d");
-		WASM_U8(0x00); // export kind = func
-		WASM_U32(0);   // function index = 0
+			// export 0: d
+			1, 'd', // name = "d"
+			0x00,   // export kind = func
+			0,      // function index = 0
+		});
 	});
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec
@@ -481,5 +474,5 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 		WASM_U32_WITH_STUB(STUB_IMUL128HI);
 	});
 
-	return p - buf;
+	THUNK_END
 }
