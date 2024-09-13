@@ -41,9 +41,14 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *buf) {
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-importsec
 	WASM_SECTION(WASM_SECTION_IMPORT, {
 		WASM_U8_THUNK({
-			1, // imports = vec(1)
+			2, // imports = vec(1)
 
-			// import 0: e.d (superscalarhash)
+			// import 0: e.m
+			1, 'e', 1, 'm', // name = "e.m"
+			0x02,           // import kind = memory
+			0x00, 0,        // limit [0..]
+
+			// import 1: e.d (superscalarhash)
 			1, 'e', 1, 'd', // name = "e.d"
 			0x00,           // func
 			1,              // (i64) -> (i64, i64, i64, i64, i64, i64, i64, i64)

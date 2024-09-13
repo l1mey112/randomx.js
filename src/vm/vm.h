@@ -39,6 +39,8 @@ struct rx_vm_t {
 	uint32_t mx;
 
 	uint64_t dataset_offset;
+
+	uint32_t fprc; // will not be stored to by `vm_program`
 };
 
 void vm_program(rx_vm_t *VM, const rx_program_t *P);

@@ -1,4 +1,4 @@
-import type { Cache } from '../dataset/dataset'
+import { randomx_superscalarhash, type Cache } from '../dataset/dataset'
 import { jit_detect, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
 import wasm from './vm.wasm'
@@ -12,9 +12,11 @@ export function randomx_create_vm(cache: Cache) {
 		memory: WebAssembly.Memory
 
 		i(feature: JitFeature): number // returns scratch buffer
-		I(): void                      // 1. start hash install
-		H(data_length: number): number // 2. hash data
-		R(): void                      // 3. end hash install, compute hash
+		I(): void
+		H(data_length: number): number
+		R(): void
+		Ri(): number
+		Rf(): number
 	}
 
 	if (!_wasm) {
@@ -25,16 +27,14 @@ export function randomx_create_vm(cache: Cache) {
 		e: {
 			ch: env_npf_putc
 		},
-		env: {
-			memory: cache.memory
-		},
 	})
 
-	const SCRATCH_SIZE = 1024 * 8
+	const SCRATCH_SIZE = 64 * 1024 // 64 KiBs (less than the real amount)
 
 	const exports = wi.exports as VmModule
 	const scratch_ptr = exports.i(_feature)
-	const scratch = new Uint8Array(exports.memory.buffer, scratch_ptr, SCRATCH_SIZE)
+	const memory = exports.memory
+	const scratch = new Uint8Array(memory.buffer, scratch_ptr, SCRATCH_SIZE)
 
 	// install seed S from H
 	function install_seed(scratch: Uint8Array, H: Uint8Array) {
@@ -48,11 +48,34 @@ export function randomx_create_vm(cache: Cache) {
 		}
 	}
 
+	const superscalarhash = randomx_superscalarhash(cache)
+	const jit_imports: WebAssembly.Imports = {
+		e: {
+			m: memory,
+			d: superscalarhash,
+		},		
+	}
+
+	function iterate_vm() {
+		do {
+			const jit_size = exports.Ri()
+			const jit_buffer = new Uint8Array(memory.buffer, scratch_ptr, jit_size)
+			console.log(`iterate_vm jit_size: 0x${scratch_ptr.toString(16)} ${jit_size}`)
+
+			const jit_wm = new WebAssembly.Module(jit_buffer)
+			const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)
+			const jit_exports = jit_wi.exports as { d: () => void }
+			jit_exports.d()
+		} while (exports.Rf())
+	}
+
 	return {
 		hash(H: Uint8Array) {
+			console.log(`hash H:`, H)
 			install_seed(scratch, H)
 			exports.R()
-			return new Uint8Array(scratch.subarray(0, 32))
+			iterate_vm()
+			return new Uint8Array(scratch.subarray(0, 32)) // Hash256
 		}
 	}
 }

@@ -23,11 +23,19 @@
 #define NULL ((void *)0)
 
 #define alignas _Alignas
+
 #define assume(cond)                 \
 	do {                             \
 		if (!(cond))                 \
 			__builtin_unreachable(); \
 	} while (0)
+
+#define assert(cond)          \
+	do {                      \
+		if (!(cond))          \
+			__builtin_trap(); \
+	} while (0)
+
 #define unreachable() __builtin_unreachable()
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)

@@ -4,30 +4,30 @@
 
 #include <stdint.h>
 
-const int mantissa_size = 52;
-const int exponent_size = 11;
-const uint64_t mantissa_mask = (1ULL << mantissa_size) - 1;
-const uint64_t exponent_mask = (1ULL << exponent_size) - 1;
-const int exponent_bias = 1023;
-const int dynamic_exponent_bits = 4;
-const int static_exponent_bits = 4;
-const uint64_t const_exponent_bits = 0x300;
-const uint64_t dynamic_mantissa_mask = (1ULL << (mantissa_size + dynamic_exponent_bits)) - 1;
+#define MANTISSA_SIZE 52
+#define EXPONENT_SIZE 11
+#define MANTISSA_MASK ((1ULL << MANTISSA_SIZE) - 1)
+#define EXPONENT_MASK ((1ULL << EXPONENT_SIZE) - 1)
+#define EXPONENT_BIAS 1023
+#define DYNAMIC_EXPONENT_BITS 4
+#define STATIC_EXPONENT_BITS 4
+#define CONST_EXPONENT_BITS UINT64_C(0x300)
+#define DYNAMIC_MANTISSA_MASK ((1ULL << (MANTISSA_SIZE + DYNAMIC_EXPONENT_BITS)) - 1) // emask
 
 static inline double get_small_positive_float_bits(uint64_t entropy) {
 	uint64_t exponent = entropy >> 59; // 0..31
-	uint64_t mantissa = entropy & mantissa_mask;
-	exponent += exponent_bias;
-	exponent &= exponent_mask;
-	exponent <<= mantissa_size;
+	uint64_t mantissa = entropy & MANTISSA_MASK;
+	exponent += EXPONENT_BIAS;
+	exponent &= EXPONENT_MASK;
+	exponent <<= MANTISSA_SIZE;
 	uint64_t result = mantissa | exponent;
 	return *(double*)&result;
 }
 
 static inline uint64_t get_static_exponent(uint64_t entropy) {
-	uint64_t exponent = const_exponent_bits;
-	exponent |= (entropy >> (64 - static_exponent_bits)) << dynamic_exponent_bits;
-	exponent <<= mantissa_size;
+	uint64_t exponent = CONST_EXPONENT_BITS;
+	exponent |= (entropy >> (64 - STATIC_EXPONENT_BITS)) << DYNAMIC_EXPONENT_BITS;
+	exponent <<= MANTISSA_SIZE;
 	return exponent;
 }
 
