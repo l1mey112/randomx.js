@@ -30,39 +30,6 @@ if (!file_wasm) {
 const obj = await $`wasm-objdump --section-offsets -d ${file_wasm}`.text()
 const funcs = obj.matchAll(new RegExp(/func\[\d+\] <(\w+)>:[\s\S]+?end/g))
 
-// Custom:
-//  - name: "name"
-//  - func[1] <P_ssh_code>
-//  - func[0] local[0] <item_number>
-//  - func[0] local[1] <mixblock_ptr>
-//  - func[0] local[2] <r0>
-//  .......................
-
-// Global[1]:
-//  - global[0] i32 mutable=0 <P_value> - init i32=0
-
-const name_cmd_obj = await $`wasm-objdump -x ${file_wasm}`.nothrow().text()
-const local_names_obj = name_cmd_obj.matchAll(new RegExp(/func\[(\d+)\] local\[(\d+)\] <(\w+)>/g))
-const global_names_obj = name_cmd_obj.matchAll(new RegExp(/global\[(\d+)\] (\w+) mutable=\d+ <(\w+)>/g))
-
-let local_names_on_function: string[][] = []
-let global_names_with_type: Map<string, string> = new Map()
-
-for (const local_name of local_names_obj) {
-	const [_, func, local, name] = local_name
-	
-	if (!local_names_on_function[+func]) {
-		local_names_on_function[+func] = []
-	}
-
-	local_names_on_function[+func][+local] = name
-}
-
-for (const global_name of global_names_obj) {
-	const [_0, _1, type, name] = global_name
-	global_names_with_type.set(name, type)
-}
-
 console.log('#pragma once')
 console.log()
 console.log('#include <stdint.h>')
@@ -139,19 +106,6 @@ for (const func of funcs) {
 			}
 		}
 
-		if (comment.startsWith('global.get')) {
-			// global.get 0 <P_value>
-
-			const param = comment.match(/<(\w+)>/)
-			if (param) {
-				const param_name = param[1]
-				const global_type = global_names_with_type.get(param_name)
-				if (global_type == 'i32') {
-					hex[hex.length - 1] = `F(${hex[hex.length - 1]})`
-				}
-			}
-		}
-
 		if (comment.startsWith('local[')) {
 			local_entries += 1
 		}
@@ -165,19 +119,6 @@ for (const func of funcs) {
 		console.error('TODO: implement LEB128 encoding for local entries')
 		console.error('      you probably have too many anyway')
 		process.exit(1)
-	}
-
-	// have locals if name custom section
-	if (local_names_on_function[i]) {
-		const local_names = local_names_on_function[i]
-
-		console.log(`// ${the_function} (locals)`)
-		for (let j = 0; j < local_names.length; j++) {
-			const local_name = local_names[j]
-			console.log(`#define \$${local_name}_${the_function} ${j}`)
-		}
-
-		console.log()
 	}
 
 	let j = 0
@@ -228,17 +169,13 @@ for (const func of funcs) {
 
 		console.log('};')
 
-		if (j + 1 != bytes_and_comments.length) {
-			console.log()
-		}
+		console.log()
 		
 		j++
 	}
 
 	i++
 }
-
-console.log()
 
 console.log(`#undef F
 #undef FUNC_OFFSET`)

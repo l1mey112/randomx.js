@@ -1,8 +1,7 @@
 H_SOURCES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
 
 JIT_STUBS_C_SOURCES := $(shell find src/jit/stubs -type f -name '*.c')
-JIT_STUBS_WAT_SOURCES := $(shell find src/jit/stubs -type f -name '*.wat')
-JIT_STUBS_H_SOURCES := $(subst .c,.h,$(JIT_STUBS_C_SOURCES)) $(subst .wat,.h,$(JIT_STUBS_WAT_SOURCES))
+JIT_STUBS_H_SOURCES := $(subst .c,.h,$(JIT_STUBS_C_SOURCES))
 
 H_SOURCES += include/configuration.h
 H_SOURCES += $(JIT_STUBS_H_SOURCES)
@@ -71,8 +70,6 @@ tests/rx_semifloat/rx_semifloat: tests/rx_semifloat/rx_semifloat_test.c tests/rx
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
 	clang -O3 $(CFLAGS) -mrelaxed-simd $(LDFLAGS) -o $@ $<
 	$(wasm-opt) -all -O4 $@ -o $@
-src/jit/stubs/%.wasm: src/jit/stubs/%.wat
-	wat2wasm $< -o $@ --debug-names --enable-all
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
 	./scripts/stubgen.ts $< > $@
 
