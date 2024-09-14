@@ -29,6 +29,7 @@ struct rx_vm_t {
 	alignas(16) f64x2_t a[4];
 
 	alignas(16) uint64_t emask[2];
+	alignas(16) uint64_t mmask[2]; // constant to be DYNAMIC_MANTISSA_MASK x2
 
 	uint32_t fprc; // will not be stored to by `vm_program`
 

@@ -21,7 +21,7 @@ static inline double get_small_positive_float_bits(uint64_t entropy) {
 	exponent &= EXPONENT_MASK;
 	exponent <<= MANTISSA_SIZE;
 	uint64_t result = mantissa | exponent;
-	return *(double*)&result;
+	return *(double *)&result;
 }
 
 static inline uint64_t get_static_exponent(uint64_t entropy) {
@@ -59,4 +59,6 @@ void vm_program(rx_vm_t *VM, const rx_program_t *P) {
 	VM->dataset_offset = (P->entropy[13] % (RANDOMX_DATASET_EXTRA_SIZE / 64 + 1)) * 64;
 	VM->emask[0] = get_float_mask(P->entropy[14]);
 	VM->emask[1] = get_float_mask(P->entropy[15]);
+	VM->mmask[0] = DYNAMIC_MANTISSA_MASK;
+	VM->mmask[1] = DYNAMIC_MANTISSA_MASK;
 }
