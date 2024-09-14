@@ -62,7 +62,7 @@ export function randomx_create_vm(cache: Cache) {
 			const jit_buffer = new Uint8Array(memory.buffer, scratch_ptr, jit_size)
 			console.log(`iterate_vm jit_size: 0x${scratch_ptr.toString(16)} ${jit_size}`)
 
-			Bun.write('a.wasm', jit_buffer).then(() => console.log('write a.wasm'))
+			Bun.write('vm.wasm', jit_buffer).then(() => console.log('write vm.wasm', jit_size / 1024))
 
 			const jit_wm = new WebAssembly.Module(jit_buffer)
 			const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)

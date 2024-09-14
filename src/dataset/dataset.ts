@@ -46,6 +46,8 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 	const jit_size = exports.K(K.length) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
+	Bun.write('ssh.wasm', jit_buffer).then(() => console.log('write ssh.wasm', jit_size / 1024))
+
 	return {
 		memory,
 		thunk: new WebAssembly.Module(jit_buffer)

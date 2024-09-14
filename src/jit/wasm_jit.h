@@ -86,6 +86,11 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 	WASM_U32(sizeof((uint8_t[])__VA_ARGS__)); \
 	WASM_U8_THUNK(__VA_ARGS__)
 
+#define WASM_U8_SHORT_NAME(name)          \
+	WASM_U8(sizeof(name "") - 1);         \
+	memcpy(p, name, sizeof(name "") - 1); \
+	p += sizeof(name "") - 1
+
 #define WASM_U32_NAME(name)               \
 	WASM_U32(sizeof(name "") - 1);        \
 	memcpy(p, name, sizeof(name "") - 1); \

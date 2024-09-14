@@ -10,9 +10,12 @@
 #define R(i) (0 + (i))
 #define F(i) (8 + (i))
 #define E(i) (12 + (i))
-#define $ma_mx 16
-#define $tmp 17
-#define $ic 18
+#define $sp_addr0 16
+#define $sp_addr1 17
+#define $mx 18
+#define $ma 19
+#define $tmp 20
+#define $ic 21
 
 uint32_t vm_ptr_to_tmp(rx_vm_t *VM, uint8_t *buf) {
 	THUNK_BEGIN;
@@ -43,6 +46,15 @@ uint32_t vm_ptr_to_tmp(rx_vm_t *VM, uint8_t *buf) {
 	WASM_U8_THUNK({0x21, reg})
 
 // local.get $tmp
+// i64.load align=2 offset=$offset
+// local.tee $reg0
+// local.set $reg1
+#define I32_LOAD2(offset, reg0, reg1)     \
+	WASM_U8_THUNK({0x20, $tmp, 0x28, 2}); \
+	WASM_U32(offset);                     \
+	WASM_U8_THUNK({0x22, reg0, 0x21, reg1})
+
+// local.get $tmp
 // local.get $reg
 // v128.store align=4 offset=$offset
 #define V128_STORE(offset, reg)                            \
@@ -60,7 +72,7 @@ uint32_t load_registers(rx_vm_t *VM, uint8_t *buf) {
 	THUNK_BEGIN;
 
 	p += vm_ptr_to_tmp(VM, buf);
-	
+
 	I64_LOAD(0, R(0));
 	I64_LOAD(8, R(1));
 	I64_LOAD(16, R(2));
@@ -77,7 +89,8 @@ uint32_t load_registers(rx_vm_t *VM, uint8_t *buf) {
 	V128_LOAD(144, E(1));
 	V128_LOAD(160, E(2));
 	V128_LOAD(176, E(3));
-	I64_LOAD(288, $ma_mx); // sp_addr0 = VM->ma
+	I32_LOAD2(288, $ma, $sp_addr1); // sp_addr1 = VM->ma
+	I32_LOAD2(292, $mx, $sp_addr0); // sp_addr0 = VM->mx
 
 	THUNK_END;
 }
@@ -86,6 +99,7 @@ uint32_t store_registers(rx_vm_t *VM, uint8_t *buf) {
 	THUNK_BEGIN;
 
 	p += vm_ptr_to_tmp(VM, buf);
+
 	I64_STORE(0, R(0));
 	I64_STORE(8, R(1));
 	I64_STORE(16, R(2));
@@ -108,6 +122,7 @@ uint32_t store_registers(rx_vm_t *VM, uint8_t *buf) {
 
 #undef I64_STORE
 #undef V128_STORE
+#undef I32_LOAD2
 #undef I64_LOAD
 #undef V128_LOAD
 
@@ -219,15 +234,14 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 	WASM_SECTION(WASM_SECTION_CODE, {
 		WASM_U8(1); // functions = vec(1)
 
-		// function 0
+		// function 0 - (actual function idx space 0 + 1 import)
 		WASM_U32_PATCH({
 			WASM_U8_THUNK({
-				4, // local entries = vec(4)
+				3, // local entries = vec(3)
 
 				8, WASM_TYPE_I64,  // $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
 				8, WASM_TYPE_V128, // $f0, $f1, $f2, $f3, $e0, $e1, $e2, $e3
-				1, WASM_TYPE_I64,  // $ma_mx
-				2, WASM_TYPE_I32,  // $tmp, $ic
+				6, WASM_TYPE_I32,  // $sp_addr0, $sp_addr1, $mx, $ma, $tmp, $ic
 			});
 
 			p += jit_vm_main(VM, P, scratchpad, p);
@@ -235,6 +249,53 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 			WASM_U8(0x0b); // end
 		});
 	});
+
+	// assign local names for debug purposes
+
+#define LOCAL_NAME(idx, name) \
+	WASM_U8(idx);             \
+	WASM_U8_SHORT_NAME(name)
+
+	// https://webassembly.github.io/spec/core/binary/modules.html#custom-section
+	// https://webassembly.github.io/spec/core/appendix/custom.html#name-section
+	WASM_SECTION(WASM_SECTION_CUSTOM, {
+		WASM_U8_THUNK({
+			4, 'n', 'a', 'm', 'e', // name = "name"
+		});
+		// local names (subsection)
+		WASM_SECTION(0x02, {
+			// vec(function_idx, vec(idx, name))
+			WASM_U8(1); // entries = vec(1)
+
+			WASM_U8(1);  // function index 1
+			WASM_U8(22); // locals = vec(22)
+
+			LOCAL_NAME(R(0), "r0");
+			LOCAL_NAME(R(1), "r1");
+			LOCAL_NAME(R(2), "r2");
+			LOCAL_NAME(R(3), "r3");
+			LOCAL_NAME(R(4), "r4");
+			LOCAL_NAME(R(5), "r5");
+			LOCAL_NAME(R(6), "r6");
+			LOCAL_NAME(R(7), "r7");
+			LOCAL_NAME(F(0), "f0");
+			LOCAL_NAME(F(1), "f1");
+			LOCAL_NAME(F(2), "f2");
+			LOCAL_NAME(F(3), "f3");
+			LOCAL_NAME(E(0), "e0");
+			LOCAL_NAME(E(1), "e1");
+			LOCAL_NAME(E(2), "e2");
+			LOCAL_NAME(E(3), "e3");
+			LOCAL_NAME($sp_addr0, "sp_addr0");
+			LOCAL_NAME($sp_addr1, "sp_addr1");
+			LOCAL_NAME($mx, "mx");
+			LOCAL_NAME($ma, "ma");
+			LOCAL_NAME($tmp, "tmp");
+			LOCAL_NAME($ic, "ic");
+		});
+	});
+
+#undef LOCAL_NAME
 
 	THUNK_END;
 }

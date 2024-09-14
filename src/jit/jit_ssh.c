@@ -467,5 +467,41 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 		WASM_U32_WITH_STUB(STUB_IMUL128HI);
 	});
 
+	// assign local names for debug purposes
+
+#define LOCAL_NAME(idx, name) \
+	WASM_U8(idx);             \
+	WASM_U8_SHORT_NAME(name)
+
+	// https://webassembly.github.io/spec/core/binary/modules.html#custom-section
+	// https://webassembly.github.io/spec/core/appendix/custom.html#name-section
+	WASM_SECTION(WASM_SECTION_CUSTOM, {
+		WASM_U8_THUNK({
+			4, 'n', 'a', 'm', 'e', // name = "name"
+		});
+		// local names (subsection)
+		WASM_SECTION(0x02, {
+			// vec(function_idx, vec(idx, name))
+			WASM_U8(1); // entries = vec(1)
+
+			WASM_U8(0);  // function index 0
+			WASM_U8(10); // locals = vec(10)
+
+			LOCAL_NAME($item_number, "item_number");
+			LOCAL_NAME($mixblock_ptr, "mixblock_ptr");
+			LOCAL_NAME(R(0), "r0");
+			LOCAL_NAME(R(1), "r1");
+			LOCAL_NAME(R(2), "r2");
+			LOCAL_NAME(R(3), "r3");
+			LOCAL_NAME(R(4), "r4");
+			LOCAL_NAME(R(5), "r5");
+			LOCAL_NAME(R(6), "r6");
+			LOCAL_NAME(R(7), "r7");
+		});
+	});
+
+#undef LOCAL_NAME
+
+
 	THUNK_END;
 }
