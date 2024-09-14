@@ -30,17 +30,17 @@ struct rx_vm_t {
 
 	alignas(16) uint64_t emask[2];
 
+	uint32_t fprc; // will not be stored to by `vm_program`
+
+	uint32_t ma;
+	uint32_t mx;
+
 	uint32_t read_reg0;
 	uint32_t read_reg1;
 	uint32_t read_reg2;
 	uint32_t read_reg3;
 
-	uint32_t ma;
-	uint32_t mx;
-
 	uint64_t dataset_offset;
-
-	uint32_t fprc; // will not be stored to by `vm_program`
 };
 
 void vm_program(rx_vm_t *VM, const rx_program_t *P);

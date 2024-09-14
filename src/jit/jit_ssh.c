@@ -284,15 +284,13 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 	//     block = cache[cacheIndex % total 64 byte items in cache]
 	//     SuperscalarHash[i](r0, r1, r2, r3, r4, r5, r6, r7)
 	//     r0..7 ^= block[0..7]
-	//     cacheIndex = r[longest dependency chain??]
+	//     cacheIndex = r[longest dependency chain]
 	//     i = i + 1
 	// } while(i < RANDOMX_CACHE_ACCESSES)
 
 	// perform unrolling up to RANDOMX_CACHE_ACCESSES
 	for (int i = 0; i < RANDOMX_CACHE_ACCESSES; i++) {
 		ss_program_t *ith_program = &prog[i];
-
-		// TODO: compose this into a function instead to take use of uOP cache
 
 		// SuperscalarHash[i](r0, r1, r2, r3, r4, r5, r6, r7)
 		for (unsigned j = 0; j < ith_program->size; j++) {

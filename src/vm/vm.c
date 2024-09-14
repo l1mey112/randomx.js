@@ -42,7 +42,9 @@ void finalise_hash() {
 	// S now contains the seed
 	fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
 
-	VM.fprc = 0; // reset rounding mode
+	// reset rounding mode
+	// rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
+	VM.fprc = 0;
 	program_count = RANDOMX_PROGRAM_COUNT;
 }
 

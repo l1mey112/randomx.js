@@ -17,6 +17,8 @@
 #define $tmp 20
 #define $ic 21
 
+#define $fprc 0
+
 uint32_t vm_ptr_to_tmp(rx_vm_t *VM, uint8_t *buf) {
 	THUNK_BEGIN;
 
@@ -46,13 +48,28 @@ uint32_t vm_ptr_to_tmp(rx_vm_t *VM, uint8_t *buf) {
 	WASM_U8_THUNK({0x21, reg})
 
 // local.get $tmp
-// i64.load align=2 offset=$offset
+// i32.load align=2 offset=$offset
 // local.tee $reg0
 // local.set $reg1
 #define I32_LOAD2(offset, reg0, reg1)     \
 	WASM_U8_THUNK({0x20, $tmp, 0x28, 2}); \
 	WASM_U32(offset);                     \
 	WASM_U8_THUNK({0x22, reg0, 0x21, reg1})
+
+// local.get $tmp
+// i32.load align=2 offset=$offset
+// global.set $global
+#define I32_LOAD_GLOBAL(offset, global)   \
+	WASM_U8_THUNK({0x20, $tmp, 0x28, 2}); \
+	WASM_U32(offset);                     \
+	WASM_U8_THUNK({0x24, global})
+
+// local.get $tmp
+// global.get $global
+// i32.store align=2 offset=$offset
+#define I32_STORE_GLOBAL(offset, global)                \
+	WASM_U8_THUNK({0x20, $tmp, 0x23, global, 0x36, 2}); \
+	WASM_U32(offset)
 
 // local.get $tmp
 // local.get $reg
@@ -89,8 +106,9 @@ uint32_t load_registers(rx_vm_t *VM, uint8_t *buf) {
 	V128_LOAD(144, E(1));
 	V128_LOAD(160, E(2));
 	V128_LOAD(176, E(3));
-	I32_LOAD2(288, $ma, $sp_addr1); // sp_addr1 = VM->ma
-	I32_LOAD2(292, $mx, $sp_addr0); // sp_addr0 = VM->mx
+	I32_LOAD_GLOBAL(272, $fprc);    // fprc = VM->fprc
+	I32_LOAD2(276, $ma, $sp_addr1); // sp_addr1 = VM->ma
+	I32_LOAD2(280, $mx, $sp_addr0); // sp_addr0 = VM->mx
 
 	THUNK_END;
 }
@@ -116,6 +134,7 @@ uint32_t store_registers(rx_vm_t *VM, uint8_t *buf) {
 	V128_STORE(144, E(1));
 	V128_STORE(160, E(2));
 	V128_STORE(176, E(3));
+	I32_STORE_GLOBAL(272, $fprc); // VM->fprc = fprc
 
 	THUNK_END;
 }
@@ -218,6 +237,19 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 		});
 	});
 
+	// https://webassembly.github.io/spec/core/binary/modules.html#global-section
+	WASM_SECTION(WASM_SECTION_GLOBAL, {
+		WASM_U8_THUNK({
+			1, // globals = vec(1)
+
+			// mut fprc: i32
+			WASM_TYPE_I32, // type = i32
+			0x01,          // mut = true
+			0x41, 0x00,    // i32.const 0
+			0x0b,          // end
+		});
+	});
+
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-exportsec
 	WASM_SECTION(WASM_SECTION_EXPORT, {
 		WASM_U8_THUNK({
@@ -258,6 +290,7 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#custom-section
 	// https://webassembly.github.io/spec/core/appendix/custom.html#name-section
+	// https://github.com/WebAssembly/extended-name-section
 	WASM_SECTION(WASM_SECTION_CUSTOM, {
 		WASM_U8_THUNK({
 			4, 'n', 'a', 'm', 'e', // name = "name"
@@ -292,6 +325,15 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 			LOCAL_NAME($ma, "ma");
 			LOCAL_NAME($tmp, "tmp");
 			LOCAL_NAME($ic, "ic");
+		});
+
+		// global names (subsection)
+		WASM_SECTION(0x07, {
+			// vec(global_idx, name)
+			WASM_U8(1); // entries = vec(1)
+
+			WASM_U8(0); // global index 0
+			WASM_U8_SHORT_NAME("fprc");
 		});
 	});
 
