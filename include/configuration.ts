@@ -17,3 +17,36 @@ export const RANDOMX_JUMP_OFFSET = 8                // Jump condition mask offse
 export const RANDOMX_SCRATCHPAD_L3 = 2097152        // Scratchpad L3 size in bytes
 export const RANDOMX_SCRATCHPAD_L2 = 262144         // Scratchpad L2 size in bytes
 export const RANDOMX_SCRATCHPAD_L1 = 16384          // Scratchpad L1 size in bytes
+
+// Instruction frequencies (per 256 opcodes)
+// Total sum of frequencies must be 256
+export const RANDOMX_FREQ_IADD_RS = 16
+export const RANDOMX_FREQ_IADD_M = 7
+export const RANDOMX_FREQ_ISUB_R = 16
+export const RANDOMX_FREQ_ISUB_M = 7
+export const RANDOMX_FREQ_IMUL_R = 16
+export const RANDOMX_FREQ_IMUL_M = 4
+export const RANDOMX_FREQ_IMULH_R = 4
+export const RANDOMX_FREQ_IMULH_M = 1
+export const RANDOMX_FREQ_ISMULH_R = 4
+export const RANDOMX_FREQ_ISMULH_M = 1
+export const RANDOMX_FREQ_IMUL_RCP = 8
+export const RANDOMX_FREQ_INEG_R = 2
+export const RANDOMX_FREQ_IXOR_R = 15
+export const RANDOMX_FREQ_IXOR_M = 5
+export const RANDOMX_FREQ_IROR_R = 8
+export const RANDOMX_FREQ_IROL_R = 2
+export const RANDOMX_FREQ_ISWAP_R = 4
+export const RANDOMX_FREQ_FSWAP_R = 4
+export const RANDOMX_FREQ_FADD_R = 16
+export const RANDOMX_FREQ_FADD_M = 5
+export const RANDOMX_FREQ_FSUB_R = 16
+export const RANDOMX_FREQ_FSUB_M = 5
+export const RANDOMX_FREQ_FSCAL_R = 6
+export const RANDOMX_FREQ_FMUL_R = 32
+export const RANDOMX_FREQ_FDIV_M = 4
+export const RANDOMX_FREQ_FSQRT_R = 6
+export const RANDOMX_FREQ_CBRANCH = 25
+export const RANDOMX_FREQ_CFROUND = 1
+export const RANDOMX_FREQ_ISTORE = 16
+export const RANDOMX_FREQ_NOP = 0

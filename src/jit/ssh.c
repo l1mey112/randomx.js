@@ -3,19 +3,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "freestanding.h"
 #include "jit.h"
 #include "ssh.h"
 #include "ssh_internal.h"
-#include "freestanding.h"
 
 #define CYCLE_MAP_SIZE (RANDOMX_SUPERSCALAR_LATENCY + 4)
 #define LOOK_FORWARD_CYCLES 4
 #define MAX_THROWAWAY_COUNT 256
-
-#define RegistersCount 8
-#define RegisterCountFlt (RegistersCount / 2)
-#define RegisterNeedsDisplacement 5 // x86 r13 register
-#define RegisterNeedsSib 4          // x86 r12 register
 
 // instruction decoder hierachy:
 
@@ -263,8 +258,8 @@ bool inst_select_source(blake2b_generator_state *S, ss_inst_desc_t *inst, int cy
 
 	// if there are only 2 available registers for IADD_RS and one of them is r5, select it as the source because it cannot be the destination
 	if (available_count == 2 && inst->kind == SS_IADD_RS) {
-		if (available_registers[0] == RegisterNeedsDisplacement || available_registers[1] == RegisterNeedsDisplacement) {
-			inst->op_group_par = inst->src = RegisterNeedsDisplacement;
+		if (available_registers[0] == REGISTER_NEEDS_DISPLACEMENT || available_registers[1] == REGISTER_NEEDS_DISPLACEMENT) {
+			inst->op_group_par = inst->src = REGISTER_NEEDS_DISPLACEMENT;
 			return true;
 		}
 	}
@@ -296,7 +291,7 @@ bool inst_select_destination(blake2b_generator_state *S, ss_inst_desc_t *inst, i
 		bool different_src = inst->can_reuse || i != inst->src;
 		bool not_chained_mul = allow_chained_mul || inst->op_group != SS_IMUL_R || registers[i].last_op_group != SS_IMUL_R;
 		bool different_last_op = registers[i].last_op_group != inst->op_group || registers[i].last_op_par != inst->op_group_par;
-		bool not_r5 = inst->kind != SS_IADD_RS || i != RegisterNeedsDisplacement;
+		bool not_r5 = inst->kind != SS_IADD_RS || i != REGISTER_NEEDS_DISPLACEMENT;
 
 		if (ready && different_src && not_chained_mul && different_last_op && not_r5) {
 			available_registers[available_count++] = i;

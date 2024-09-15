@@ -39,7 +39,7 @@ console.log(`#ifndef FUNC_OFFSET
 #define FUNC_OFFSET 0
 #endif
 
-#define F(x) (x + FUNC_OFFSET)
+#define _(x) (x + FUNC_OFFSET)
 `)
 
 let i = 0
@@ -84,7 +84,7 @@ for (const func of funcs) {
 		const hex = hex_spaces.split(' ').map((h) => `0x${h}`)
 
 		// 0x10, 0x00, // call 0 <mul128hi>
-		//       ^^^^ -> F(0x00) - replace with function offset
+		//       ^^^^ -> _(0x00) - replace with function offset
 
 		if (comment.startsWith('call') || comment.startsWith('return_call')) {			
 			// call 1 <P_ssh_code>
@@ -92,7 +92,7 @@ for (const func of funcs) {
 			// extract the parameter P_
 			const param = comment.match(/<P_(\w+)>/)
 			if (!param) {
-				hex[hex.length - 1] = `F(${hex[hex.length - 1]})`
+				hex[hex.length - 1] = `_(${hex[hex.length - 1]})`
 			} else {
 				const param_name = param[1]
 				// start a new thunk
@@ -177,5 +177,5 @@ for (const func of funcs) {
 	i++
 }
 
-console.log(`#undef F
+console.log(`#undef _
 #undef FUNC_OFFSET`)

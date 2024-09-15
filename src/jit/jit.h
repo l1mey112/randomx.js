@@ -1,3 +1,5 @@
+#pragma once
+
 #include "configuration.h"
 #include "ssh.h"
 #include "vm/vm.h"

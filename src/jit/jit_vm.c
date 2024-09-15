@@ -1,3 +1,4 @@
+#include "jit_vm.h"
 #include "configuration.h"
 #include "freestanding.h"
 #include "inst.h"
@@ -7,20 +8,11 @@
 
 #include <stdint.h>
 
-#define R(i) (0 + (i))
-#define F(i) (8 + (i))
-#define E(i) (12 + (i))
-#define $sp_addr0 16
-#define $sp_addr1 17
-#define $mx 18
-#define $ma 19
-#define $tmp 20
-#define $ic 21
-#define $tmp64 22
-#define $mask_mant 23
-#define $mask_exp 24
+#define FUNC_OFFSET 2
+#include "stubs/mulh.h"
 
-#define $fprc 0
+#define FUNC_OFFSET 4
+#include "stubs/semifloat.h"
 
 uint32_t ptr_to_tmp(void *ptr, uint8_t *buf) {
 	THUNK_BEGIN;
@@ -310,8 +302,17 @@ uint32_t jit_vm_main(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, ui
 		V128_LOAD_E(56, E(3));
 	}
 
-	// TODO: 4. The 256 instructions stored in the Program Buffer are executed.
+	// 4. The 256 instructions stored in the Program Buffer are executed.
 	{
+		int register_usage[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
+
+		for (int pc = 0; pc < RANDOMX_PROGRAM_SIZE; pc++) {
+			const rx_inst_t *inst = &P->program[pc];
+			// compile instruction
+			// (inst, pc, scratchpad, VM)
+
+			p += jit_vm_inst(VM, inst, scratchpad, register_usage, pc, p);
+		}
 	}
 
 	// 5. The mx register is XORed with the low 32 bits of registers readReg2 and readReg3 (see Table 4.5.3).
@@ -479,7 +480,7 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 	// https://webassembly.github.io/spec/core/binary/modules.html#type-section
 	WASM_SECTION(WASM_SECTION_TYPE, {
 		WASM_U8_THUNK({
-			2, // function types = vec(2)
+			5, // function types = vec(5)
 
 			// function type 0 : () -> ()
 			0x60,
@@ -499,6 +500,29 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 			WASM_TYPE_I64,
 			WASM_TYPE_I64,
 			WASM_TYPE_I64,
+
+			// function type 2 : (i64, i64) -> i64
+			0x60,
+			2, // 2 parameters
+			WASM_TYPE_I64,
+			WASM_TYPE_I64,
+			1, // 1 return value
+			WASM_TYPE_I64,
+
+			// function type 3 : (v128, v128) -> v128
+			0x60,
+			2, // 2 parameters
+			WASM_TYPE_V128,
+			WASM_TYPE_V128,
+			1, // 1 return value
+			WASM_TYPE_V128,
+
+			// function type 4 : (v128) -> v128
+			0x60,
+			1, // 1 parameter
+			WASM_TYPE_V128,
+			1, // 1 return value
+			WASM_TYPE_V128,
 		});
 	});
 
@@ -525,9 +549,12 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcsec
 	WASM_SECTION(WASM_SECTION_FUNCTION, {
 		WASM_U8_THUNK({
-			1, // functions = vec(1)
+			18, // functions = vec(18)
 
-			0, // type = 0
+			0,                                  // type = 0
+			2, 2,                               // type = 2
+			3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // type = 3
+			4, 4, 4,                            // type = 4
 		});
 	});
 
@@ -558,7 +585,7 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec
 	WASM_SECTION(WASM_SECTION_CODE, {
-		WASM_U8(1); // functions = vec(1)
+		WASM_U8(18); // functions = vec(18)
 
 		// function 0 - (actual function idx space 0 + 1 import)
 		WASM_U32_PATCH({
@@ -576,6 +603,44 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 
 			WASM_U8(0x0b); // end
 		});
+
+		// function 1 - mul128hi (idx 2)
+		WASM_U32_WITH_STUB(STUB_MUL128HI);
+
+		// function 2 - imul128hi (idx 3)
+		WASM_U32_WITH_STUB(STUB_IMUL128HI);
+
+		// 3 fprc x 5 operations = 15 stubs
+		// function 3..17 - fprc_0..fprc_3 (idx 4..18)
+		WASM_U32_WITH_STUB(STUB_FADD_1);
+		WASM_U32_WITH_STUB(STUB_FADD_2);
+		WASM_U32_WITH_STUB(STUB_FADD_3);
+
+		WASM_U32_WITH_STUB(STUB_FSUB_1);
+		WASM_U32_WITH_STUB(STUB_FSUB_2);
+		WASM_U32_WITH_STUB(STUB_FSUB_3);
+
+		if (jit_feature & JIT_FMA) {
+			WASM_U32_WITH_STUB(STUB_FMUL_FMA_1);
+			WASM_U32_WITH_STUB(STUB_FMUL_FMA_2);
+			WASM_U32_WITH_STUB(STUB_FMUL_FMA_3);
+			WASM_U32_WITH_STUB(STUB_FDIV_FMA_1);
+			WASM_U32_WITH_STUB(STUB_FDIV_FMA_2);
+			WASM_U32_WITH_STUB(STUB_FDIV_FMA_3);
+			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_1);
+			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_2);
+			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_3);
+		} else {
+			WASM_U32_WITH_STUB(STUB_FMUL_1);
+			WASM_U32_WITH_STUB(STUB_FMUL_2);
+			WASM_U32_WITH_STUB(STUB_FMUL_3);
+			WASM_U32_WITH_STUB(STUB_FDIV_1);
+			WASM_U32_WITH_STUB(STUB_FDIV_2);
+			WASM_U32_WITH_STUB(STUB_FDIV_3);
+			WASM_U32_WITH_STUB(STUB_FSQRT_1);
+			WASM_U32_WITH_STUB(STUB_FSQRT_2);
+			WASM_U32_WITH_STUB(STUB_FSQRT_3);
+		}
 	});
 
 	// assign local names for debug purposes
