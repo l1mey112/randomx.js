@@ -48,7 +48,7 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(UFLAGS) \
 # -matomics -Wl,--shared-memory to use shared memory
 
 .PHONY: all clean
-all: src/dataset/dataset.wasm src/vm/vm.wasm tests/harness.wasm tests/rx_semifloat/rx_semifloat
+all: src/dataset/dataset.wasm src/vm/vm.wasm tests/harness.wasm tests/semifloat/semifloat
 
 clean:
 	rm -f **/*.wasm **/*.wasm.pages.ts include/configuration.h src/jit/stubs/*.h **/*.o
@@ -64,14 +64,14 @@ GIT_HASH := $(shell git log -1 --format=%h)
 
 # FP heap is so fucking large that it only makes sense to compile with TCC
 # don't even bother with optimisations on
-tests/rx_semifloat/the_randomx_fp_heap.o: tests/rx_semifloat/the_randomx_fp_heap.c tests/rx_semifloat/the_randomx_fp_heap.h
-	tcc -c -o $@ tests/rx_semifloat/the_randomx_fp_heap.c
+tests/semifloat/the_randomx_fp_heap.o: tests/semifloat/the_randomx_fp_heap.c tests/semifloat/the_randomx_fp_heap.h
+	tcc -c -o $@ tests/semifloat/the_randomx_fp_heap.c
 # ensure separate compilation units, NO LTO/INLINING
-tests/rx_semifloat/rx_semifloat_stub.o: src/jit/stubs/rx_semifloat.c
+tests/semifloat/semifloat_stub.o: src/jit/stubs/semifloat.c
 	clang -march=native -fno-lto $(UFLAGS) -O3 -c -o $@ $<
-tests/rx_semifloat/rx_semifloat: tests/rx_semifloat/rx_semifloat_test.c tests/rx_semifloat/rx_semifloat_stub.o tests/rx_semifloat/the_randomx_fp_heap.o
+tests/semifloat/semifloat: tests/semifloat/semifloat_test.c tests/semifloat/semifloat_stub.o tests/semifloat/the_randomx_fp_heap.o
 	clang -march=native -fno-lto -ffp-model=strict $(UFLAGS) -lm -Og -ggdb -o $@ \
-		tests/rx_semifloat/rx_semifloat_test.c tests/rx_semifloat/rx_semifloat_stub.o tests/rx_semifloat/the_randomx_fp_heap.o \
+		tests/semifloat/semifloat_test.c tests/semifloat/semifloat_stub.o tests/semifloat/the_randomx_fp_heap.o \
 		-DGIT_HASH=\"$(GIT_HASH)\"
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c

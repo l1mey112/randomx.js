@@ -1,4 +1,4 @@
 *.h linguist-language=C
 include/nanoprintf.h linguist-vendored
 include/wasm_simd128_polyfill.h linguist-vendored
-tests/rx_semifloat/the_randomx_fp_heap.c linguist-vendored
+tests/semifloat/the_randomx_fp_heap.c linguist-vendored
