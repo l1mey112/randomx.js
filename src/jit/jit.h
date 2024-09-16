@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf);
-uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t *buf);
+uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf);
 
 typedef enum jit_feature_t jit_feature_t;
 
@@ -23,3 +23,6 @@ enum jit_feature_t {
 uint64_t jit_reciprocal(uint32_t divisor);
 
 #define POWER_OF_ZERO_OR_TWO(x) ((x & (x - 1)) == 0)
+
+// WASM is always a two's complement machine, we can just cast
+#define IMM_SEXT64(x) ((int64_t)(int32_t)(x))

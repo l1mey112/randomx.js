@@ -214,7 +214,7 @@ uint32_t epilogue_store_registers(rx_vm_t *VM, uint8_t *buf) {
 #define DATASET_ITEM_SIZE_LOG2 6
 #define CACHE_LINE_MASK ((RANDOMX_DATASET_BASE_SIZE - 1) & ~(DATASET_ITEM_SIZE - 1))
 
-uint32_t jit_vm_main(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t *buf) {
+uint32_t jit_vm_main(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf) {
 	THUNK_BEGIN;
 
 	// load registers from VM pointer
@@ -308,15 +308,9 @@ uint32_t jit_vm_main(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, ui
 
 	// 4. The 256 instructions stored in the Program Buffer are executed.
 	{
-		int register_usage[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
-
-		for (int pc = 0; pc < RANDOMX_PROGRAM_SIZE; pc++) {
-			const rx_inst_t *inst = &P->program[pc];
-			// compile instruction
-			// (inst, pc, scratchpad, VM)
-
-			p += jit_vm_inst(VM, inst, scratchpad, register_usage, pc, p);
-		}
+		static jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE];
+		jit_vm_insts_decode(P->program, jump_desc); // mutate P->program, decode instructions, cover assertions
+		p += jit_vm_insts(P->program, jump_desc, scratchpad, p); // JIT the code
 	}
 
 	// 5. The mx register is XORed with the low 32 bits of registers readReg2 and readReg3 (see Table 4.5.3).
@@ -476,7 +470,8 @@ uint32_t jit_vm_main(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, ui
 	THUNK_END;
 }
 
-uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t *buf) {
+// will mutate instructions in `P`
+uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf) {
 	THUNK_BEGIN;
 
 	WASM_MAGIC();
@@ -753,6 +748,17 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 	WASM_SECTION(WASM_SECTION_CUSTOM, {
 		WASM_U8_THUNK({
 			4, 'n', 'a', 'm', 'e', // name = "name"
+		});
+
+		// function names (subsection)
+		WASM_SECTION(0x01, {
+			// vec(function_idx, name)
+			WASM_U8(2); // entries = vec(1)
+
+			WASM_U8(2);
+			WASM_U8_SHORT_NAME("mul128hi");
+			WASM_U8(3);
+			WASM_U8_SHORT_NAME("imul128hi");
 		});
 
 		// local names (subsection)

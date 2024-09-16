@@ -1,8 +1,10 @@
 #pragma once
 
+#include "freestanding.h"
+#include "configuration.h"
 #include "inst.h"
-#include "vm/vm.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 
 // locals
@@ -27,6 +29,49 @@
 #define $MUL128HI 2
 #define $IMUL128HI 3
 
-#define INST_JIT_PARAMS __attribute__((unused)) rx_vm_t *VM, const rx_inst_t *inst, uint8_t *scratchpad, int register_usage[8], int i, uint8_t *buf
+typedef enum jit_inst_kind_t jit_inst_kind_t;
+typedef struct jit_jump_desc_t jit_jump_desc_t;
 
-uint32_t jit_vm_inst(INST_JIT_PARAMS);
+struct jit_jump_desc_t {
+	bool target;   // false if not a target, true if a target
+
+	// supporting data for CBRANCH instructions
+	uint32_t mask; // if (dst & mask) == 0, then branch
+	uint64_t imm;  // dst += imm
+};
+
+void jit_vm_insts_decode(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE]);
+uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE], uint8_t *scratchpad, uint8_t *buf);
+
+enum jit_inst_kind_t {
+	IADD_RS,
+	IADD_M,
+	ISUB_R,
+	ISUB_M,
+	IMUL_R,
+	IMUL_M,
+	IMULH_R,
+	IMULH_M,
+	ISMULH_R,
+	ISMULH_M,
+	IMUL_RCP,
+	INEG_R,
+	IXOR_R,
+	IXOR_M,
+	IROR_R,
+	IROL_R,
+	ISWAP_R,
+	FSWAP_R,
+	FADD_R,
+	FADD_M,
+	FSUB_R,
+	FSUB_M,
+	FSCAL_R,
+	FMUL_R,
+	FDIV_M,
+	FSQRT_R,
+	CBRANCH,
+	CFROUND,
+	ISTORE,
+	NOP,
+};
