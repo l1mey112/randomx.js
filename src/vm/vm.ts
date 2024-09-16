@@ -1,10 +1,11 @@
 import { randomx_superscalarhash, type Cache } from '../dataset/dataset'
-import { jit_detect, type JitFeature } from '../detect/detect'
+import { jit_detect, jit_feature_stringify, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
 import wasm from './vm.wasm'
 
 let _wasm: WebAssembly.Module | null = null
 const _feature: JitFeature = jit_detect()
+console.log('feature:', jit_feature_stringify(_feature))
 
 // new virtual machine
 export function randomx_create_vm(cache: Cache) {

@@ -29,3 +29,17 @@ export function jit_detect(): JitFeature {
 		return JIT_BASELINE // no relaxed SIMD
 	}
 }
+
+export function jit_feature_stringify(feature: JitFeature): string {
+	let s = 'baseline'
+
+	if (feature & JIT_RELAXED_SIMD) {
+		s += '+ relaxed-simd'
+	}
+
+	if (feature & JIT_FMA) {
+		s += ' + fma'
+	}
+
+	return s
+}

@@ -9,15 +9,16 @@
 #define R(i) (0 + (i))
 #define F(i) (8 + (i))
 #define E(i) (12 + (i))
-#define $sp_addr0 16
-#define $sp_addr1 17
-#define $mx 18
-#define $ma 19
-#define $tmp 20
-#define $ic 21
-#define $tmp64 22
-#define $mask_mant 23
-#define $mask_exp 24
+#define A(i) (16 + (i))
+#define $sp_addr0 20
+#define $sp_addr1 21
+#define $mx 22
+#define $ma 23
+#define $tmp 24
+#define $ic 25
+#define $tmp64 26
+#define $mask_mant 27
+#define $mask_exp 28
 
 // globals
 #define $fprc 0

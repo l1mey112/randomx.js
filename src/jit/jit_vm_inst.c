@@ -598,6 +598,14 @@ uint32_t jit_vm_inst(INST_JIT_PARAMS) {
 	if (opcode < ceil_FADD_R) {
 		int dst = inst->dst % 4;
 		int src = inst->src % 4;
+
+		WASM_U8_THUNK({
+			0x20, F(dst), // local.get $dest
+			0x20, A(src), // local.get $src
+			0x23, $fprc,  // global.get $fprc
+			0x11, 3, 0,   // call_indirect table 0, type (v128, v128) -> v128
+			0x21, F(dst), // local.set $dest
+		});
 	}
 
 	THUNK_END;

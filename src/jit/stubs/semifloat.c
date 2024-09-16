@@ -83,6 +83,12 @@ static inline v128_t nextafter_3_nozero(v128_t res, v128_t c) {
 	return wasm_v128_bitselect(k, c, to_round);
 }
 
+WASM_EXPORT("fadd_0")
+v128_t fadd_0(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_add(dest, src);
+	return c;
+}
+
 WASM_EXPORT("fadd_1")
 v128_t fadd_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_add(dest, src);
@@ -102,6 +108,12 @@ v128_t fadd_3(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_add(dest, src);
 	v128_t res = sum_residue(dest, src, c);
 	return nextafter_3_finite(res, c);
+}
+
+WASM_EXPORT("fsub_0")
+v128_t fsub_0(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_sub(dest, src);
+	return c;
 }
 
 WASM_EXPORT("fsub_1")
@@ -195,6 +207,12 @@ static inline v128_t ldexp_reg_e_nozero_noinf(v128_t x, v128_t n) {
 
 // infinities absolutely unlikely. 0.003414% of all cases
 // TODO: it seems like this branch doesn't do much to influence the performance
+
+WASM_EXPORT("fmul_0")
+v128_t fmul_0(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_mul(dest, src);
+	return c;
+}
 
 WASM_EXPORT("fmul_1")
 v128_t fmul_1(v128_t dest, v128_t src) {
@@ -296,6 +314,12 @@ v128_t fmul_fma_3(v128_t dest, v128_t src) {
 	return nextafter_3_nozero(res, c);
 }
 
+WASM_EXPORT("fdiv_0")
+v128_t fdiv_0(v128_t dest, v128_t src) {
+	v128_t c = wasm_f64x2_div(dest, src);
+	return c;
+}
+
 WASM_EXPORT("fdiv_1")
 v128_t fdiv_1(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_div(dest, src);
@@ -394,6 +418,12 @@ v128_t fdiv_fma_3(v128_t dest, v128_t src) {
 	v128_t c = wasm_f64x2_div(dest, src);
 	v128_t res = mul_residue_fma(c, src, dest);
 	return nextafter_3_nozero(wasm_f64x2_neg(res), c);
+}
+
+WASM_EXPORT("fsqrt_0")
+v128_t fsqrt_0(v128_t dest) {
+	v128_t c = wasm_f64x2_sqrt(dest);
+	return c;
 }
 
 WASM_EXPORT("fsqrt_1")

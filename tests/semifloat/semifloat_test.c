@@ -36,26 +36,17 @@ struct finst_t {
 	v128_t (*fprc[4])(v128_t, v128_t); // probably safe to call one arg function with two args
 };
 
-v128_t fadd_0(v128_t dest, v128_t src) {
-	return wasm_f64x2_add(dest, src);
-}
-
+v128_t fadd_0(v128_t dest, v128_t src);
 v128_t fadd_1(v128_t dest, v128_t src);
 v128_t fadd_2(v128_t dest, v128_t src);
 v128_t fadd_3(v128_t dest, v128_t src);
 
-v128_t fsub_0(v128_t dest, v128_t src) {
-	return wasm_f64x2_sub(dest, src);
-}
-
+v128_t fsub_0(v128_t dest, v128_t src) ;
 v128_t fsub_1(v128_t dest, v128_t src);
 v128_t fsub_2(v128_t dest, v128_t src);
 v128_t fsub_3(v128_t dest, v128_t src);
 
-v128_t fmul_0(v128_t dest, v128_t src) {
-	return wasm_f64x2_mul(dest, src);
-}
-
+v128_t fmul_0(v128_t dest, v128_t src);
 v128_t fmul_1(v128_t dest, v128_t src);
 v128_t fmul_2(v128_t dest, v128_t src);
 v128_t fmul_3(v128_t dest, v128_t src);
@@ -64,10 +55,7 @@ v128_t fmul_fma_1(v128_t dest, v128_t src);
 v128_t fmul_fma_2(v128_t dest, v128_t src);
 v128_t fmul_fma_3(v128_t dest, v128_t src);
 
-v128_t fdiv_0(v128_t dest, v128_t src) {
-	return wasm_f64x2_div(dest, src);
-}
-
+v128_t fdiv_0(v128_t dest, v128_t src);
 v128_t fdiv_1(v128_t dest, v128_t src);
 v128_t fdiv_2(v128_t dest, v128_t src);
 v128_t fdiv_3(v128_t dest, v128_t src);
@@ -76,10 +64,7 @@ v128_t fdiv_fma_1(v128_t dest, v128_t src);
 v128_t fdiv_fma_2(v128_t dest, v128_t src);
 v128_t fdiv_fma_3(v128_t dest, v128_t src);
 
-v128_t fsqrt_0(v128_t dest) {
-	return wasm_f64x2_sqrt(dest);
-}
-
+v128_t fsqrt_0(v128_t dest);
 v128_t fsqrt_1(v128_t dest);
 v128_t fsqrt_2(v128_t dest);
 v128_t fsqrt_3(v128_t dest);

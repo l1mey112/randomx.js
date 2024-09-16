@@ -168,6 +168,10 @@ uint32_t prologue_load_registers(rx_vm_t *VM, uint8_t *buf) {
 	V128_LOAD(144, E(1));
 	V128_LOAD(160, E(2));
 	V128_LOAD(176, E(3));
+	V128_LOAD(192, A(0));
+	V128_LOAD(208, A(1));
+	V128_LOAD(224, A(2));
+	V128_LOAD(240, A(3));
 	V128_LOAD(256, $mask_exp);      // mask_exp = VM->emask
 	V128_LOAD(272, $mask_mant);     // mask_mant = {DYNAMIC_MANTISSA_MASK, DYNAMIC_MANTISSA_MASK}
 	I32_LOAD_GLOBAL(288, $fprc);    // fprc = VM->fprc
@@ -529,7 +533,7 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-importsec
 	WASM_SECTION(WASM_SECTION_IMPORT, {
 		WASM_U8_THUNK({
-			2, // imports = vec(1)
+			2, // imports = vec(2)
 
 			// import 0: e.m
 			1, 'e', 1, 'm', // name = "e.m"
@@ -549,12 +553,43 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcsec
 	WASM_SECTION(WASM_SECTION_FUNCTION, {
 		WASM_U8_THUNK({
-			18, // functions = vec(18)
+			23, // functions = vec(23)
 
-			0,                                  // type = 0
-			2, 2,                               // type = 2
-			3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // type = 3
-			4, 4, 4,                            // type = 4
+			0,                                              // type = 0
+			2, 2,                                           // type = 2
+			3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // type = 3
+			4, 4, 4, 4,                                     // type = 4
+		});
+	});
+
+	// table section for fprc dispatch
+	// 5 table entries for 5 fp operations (fadd, fsub, fmul, fdiv, fsqrt)
+	// 4 elements per entry (fprc_0, fprc_1, fprc_2, fprc_3)
+
+	// https://webassembly.github.io/spec/core/binary/modules.html#binary-tablesec
+	WASM_SECTION(WASM_SECTION_TABLE, {
+		WASM_U8_THUNK({
+			5, // tables = vec(5)
+
+			// table 0: fadd
+			0x70,       // funcref
+			0x01, 4, 4, // min 4, max 4
+
+			// table 1: fsub
+			0x70,       // funcref
+			0x01, 4, 4, // min 4, max 4
+
+			// table 2: fmul
+			0x70,       // funcref
+			0x01, 4, 4, // min 4, max 4
+
+			// table 3: fdiv
+			0x70,       // funcref
+			0x01, 4, 4, // min 4, max 4
+
+			// table 4: fsqrt
+			0x70,       // funcref
+			0x01, 4, 4, // min 4, max 4
 		});
 	});
 
@@ -583,20 +618,67 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 		});
 	});
 
+	// https://webassembly.github.io/spec/core/binary/modules.html#binary-elemsec
+	WASM_SECTION(WASM_SECTION_ELEMENT, {
+		WASM_U8_THUNK({
+			5, // elems = vec(5)
+
+			// elem 0: fadd
+			0x02,
+			0,             // table index = 0
+			0x41, 0, 0x0b, // offset = i32.const 0
+			0x00,          // funcref
+			4,             // elements = vec(4)
+			4, 5, 6, 7,    // fprc_0..fprc_3
+
+			// elem 1: fsub
+			0x02,
+			1,             // table index = 1
+			0x41, 0, 0x0b, // offset = i32.const 0
+			0x00,          // funcref
+			4,             // elements = vec(4)
+			8, 9, 10, 11,  // fprc_0..fprc_3
+
+			// elem 2: fmul
+			0x02,
+			2,              // table index = 2
+			0x41, 0, 0x0b,  // offset = i32.const 0
+			0x00,           // funcref
+			4,              // elements = vec(4)
+			12, 13, 14, 15, // fprc_0..fprc_3
+
+			// elem 3: fdiv
+			0x02,
+			3,              // table index = 3
+			0x41, 0, 0x0b,  // offset = i32.const 0
+			0x00,           // funcref
+			4,              // elements = vec(4)
+			16, 17, 18, 19, // fprc_0..fprc_3
+
+			// elem 4: fsqrt
+			0x02,
+			4,              // table index = 4
+			0x41, 0, 0x0b,  // offset = i32.const 0
+			0x00,           // funcref
+			4,              // elements = vec(4)
+			20, 21, 22, 23, // fprc_0..fprc_3
+		});
+	});
+
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-codesec
 	WASM_SECTION(WASM_SECTION_CODE, {
-		WASM_U8(18); // functions = vec(18)
+		WASM_U8(23); // functions = vec(23)
 
 		// function 0 - (actual function idx space 0 + 1 import)
 		WASM_U32_PATCH({
 			WASM_U8_THUNK({
 				5, // local entries = vec(3)
 
-				8, WASM_TYPE_I64,  // $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
-				8, WASM_TYPE_V128, // $f0, $f1, $f2, $f3, $e0, $e1, $e2, $e3
-				6, WASM_TYPE_I32,  // $sp_addr0, $sp_addr1, $mx, $ma, $tmp, $ic
-				1, WASM_TYPE_I64,  // $tmp64
-				2, WASM_TYPE_V128, // $tmp128_mant, $tmp128_emask
+				8, WASM_TYPE_I64,   // $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
+				12, WASM_TYPE_V128, // $f0, $f1, $f2, $f3, $e0, $e1, $e2, $e3, $a0, $a1, $a2, $a3
+				6, WASM_TYPE_I32,   // $sp_addr0, $sp_addr1, $mx, $ma, $tmp, $ic
+				1, WASM_TYPE_I64,   // $tmp64
+				2, WASM_TYPE_V128,  // $tmp128_mant, $tmp128_emask
 			});
 
 			p += jit_vm_main(VM, P, scratchpad, p);
@@ -611,32 +693,48 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 		WASM_U32_WITH_STUB(STUB_IMUL128HI);
 
 		// 3 fprc x 5 operations = 15 stubs
-		// function 3..17 - fprc_0..fprc_3 (idx 4..18)
+		// function 3..22 - fprc_0..fprc_3 (idx 4..23)
+		WASM_U32_WITH_STUB(STUB_FADD_0);
 		WASM_U32_WITH_STUB(STUB_FADD_1);
 		WASM_U32_WITH_STUB(STUB_FADD_2);
 		WASM_U32_WITH_STUB(STUB_FADD_3);
 
+		WASM_U32_WITH_STUB(STUB_FSUB_0);
 		WASM_U32_WITH_STUB(STUB_FSUB_1);
 		WASM_U32_WITH_STUB(STUB_FSUB_2);
 		WASM_U32_WITH_STUB(STUB_FSUB_3);
+
+		WASM_U32_WITH_STUB(STUB_FMUL_0);
 
 		if (jit_feature & JIT_FMA) {
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_3);
-			WASM_U32_WITH_STUB(STUB_FDIV_FMA_1);
-			WASM_U32_WITH_STUB(STUB_FDIV_FMA_2);
-			WASM_U32_WITH_STUB(STUB_FDIV_FMA_3);
-			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_1);
-			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_2);
-			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_3);
 		} else {
 			WASM_U32_WITH_STUB(STUB_FMUL_1);
 			WASM_U32_WITH_STUB(STUB_FMUL_2);
 			WASM_U32_WITH_STUB(STUB_FMUL_3);
+		}
+
+		WASM_U32_WITH_STUB(STUB_FDIV_0);
+
+		if (jit_feature & JIT_FMA) {
+			WASM_U32_WITH_STUB(STUB_FDIV_FMA_1);
+			WASM_U32_WITH_STUB(STUB_FDIV_FMA_2);
+			WASM_U32_WITH_STUB(STUB_FDIV_FMA_3);
+		} else {
 			WASM_U32_WITH_STUB(STUB_FDIV_1);
 			WASM_U32_WITH_STUB(STUB_FDIV_2);
 			WASM_U32_WITH_STUB(STUB_FDIV_3);
+		}
+
+		WASM_U32_WITH_STUB(STUB_FSQRT_0);
+
+		if (jit_feature & JIT_FMA) {
+			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_1);
+			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_2);
+			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_3);
+		} else {
 			WASM_U32_WITH_STUB(STUB_FSQRT_1);
 			WASM_U32_WITH_STUB(STUB_FSQRT_2);
 			WASM_U32_WITH_STUB(STUB_FSQRT_3);
@@ -656,13 +754,14 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 		WASM_U8_THUNK({
 			4, 'n', 'a', 'm', 'e', // name = "name"
 		});
+
 		// local names (subsection)
 		WASM_SECTION(0x02, {
 			// vec(function_idx, vec(idx, name))
 			WASM_U8(1); // entries = vec(1)
 
 			WASM_U8(1);  // function index 1
-			WASM_U8(25); // locals = vec(25)
+			WASM_U8(29); // locals = vec(29)
 
 			LOCAL_NAME(R(0), "r0");
 			LOCAL_NAME(R(1), "r1");
@@ -680,6 +779,10 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 			LOCAL_NAME(E(1), "e1");
 			LOCAL_NAME(E(2), "e2");
 			LOCAL_NAME(E(3), "e3");
+			LOCAL_NAME(A(0), "a0");
+			LOCAL_NAME(A(1), "a1");
+			LOCAL_NAME(A(2), "a2");
+			LOCAL_NAME(A(3), "a3");
 			LOCAL_NAME($sp_addr0, "sp_addr0");
 			LOCAL_NAME($sp_addr1, "sp_addr1");
 			LOCAL_NAME($mx, "mx");
@@ -689,6 +792,23 @@ uint32_t jit_vm(rx_vm_t *VM, const rx_program_t *P, uint8_t *scratchpad, uint8_t
 			LOCAL_NAME($tmp64, "tmp64");
 			LOCAL_NAME($mask_mant, "mask_mant");
 			LOCAL_NAME($mask_exp, "mask_exp");
+		});
+
+		// table names (subsection)
+		WASM_SECTION(0x05, {
+			// vec(table_idx, name)
+			WASM_U8(5); // entries = vec(5)
+
+			WASM_U8(0);
+			WASM_U8_SHORT_NAME("fadd_table");
+			WASM_U8(1);
+			WASM_U8_SHORT_NAME("fsub_table");
+			WASM_U8(2);
+			WASM_U8_SHORT_NAME("fmul_table");
+			WASM_U8(3);
+			WASM_U8_SHORT_NAME("fdiv_table");
+			WASM_U8(4);
+			WASM_U8_SHORT_NAME("fsqrt_table");
 		});
 
 		// global names (subsection)
