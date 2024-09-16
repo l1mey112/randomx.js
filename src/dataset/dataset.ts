@@ -64,10 +64,13 @@ export function randomx_alloc_cache(conf?: CacheOptions | undefined | null): Cac
 	}
 }
 
-export function randomx_init_cache(K: Uint8Array | undefined | null, module: CacheModule): Cache
-export function randomx_init_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache
+export function randomx_init_cache(K: string | Uint8Array | undefined | null, module: CacheModule): Cache
+export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache
 
-export function randomx_init_cache(K?: Uint8Array | undefined | null, conf?: CacheOptions | undefined | null | CacheModule): Cache {
+export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: CacheOptions | undefined | null | CacheModule): Cache {
+	if (typeof K === 'string') {
+		K = new TextEncoder().encode(K)
+	}
 	K ??= new Uint8Array()
 
 	if (K.length > 60) {

@@ -72,13 +72,28 @@ export function randomx_create_vm(cache: Cache) {
 		} while (exports.Rf())
 	}
 
-	return {
-		hash(H: Uint8Array) {
-			console.log(`hash H:`, H)
-			install_seed(scratch, H)
-			exports.R()
-			iterate_vm()
-			return new Uint8Array(scratch.subarray(0, 32)) // Hash256
+	function hash(H: Uint8Array | string): Uint8Array | string {
+		if (typeof H === 'string') {
+			H = new TextEncoder().encode(H)
 		}
+		console.log(`hash H:`, H)
+		install_seed(scratch, H)
+		exports.R()
+		iterate_vm()
+		return new Uint8Array(scratch.subarray(0, 32)) // Hash256
+	}
+
+	return {
+		calculate_hash(H: Uint8Array | string) {
+			return hash(H)
+		},
+		calculate_hex_hash(H: Uint8Array | string) {
+			const R = hash(H)
+			let hex = ''
+			for (let i = 0; i < R.length; i++) {
+				hex += R[i].toString(16).padStart(2, '0')
+			}
+			return hex
+		},
 	}
 }

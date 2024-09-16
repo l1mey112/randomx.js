@@ -1,7 +1,9 @@
 import { randomx_create_vm, randomx_init_cache } from '../src/index'
 
 // cache construction takes on average 1 second
-const cache = randomx_init_cache()
+const cache = randomx_init_cache('test key 000')
 const randomx = randomx_create_vm(cache)
 
-console.log(randomx.hash(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])))
+const time_now = performance.now()
+console.log(randomx.calculate_hex_hash('Lorem ipsum dolor sit amet'))
+console.log('time', performance.now() - time_now, 'ms')
