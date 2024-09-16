@@ -21,12 +21,13 @@ VM_C_SOURCES := $(sort $(shell find src/vm -type f -name '*.c') $(BLAKE2B_C_SOUR
 TESTS_C_SOURCES := $(sort $(shell find tests -maxdepth 1 -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
 
 wasm-opt := wasm-opt
+DFLAGS :=
 
-# Debian is a great simple daily driver. however, its fucking terrible for development.
+# Debian is a great simple daily driver. However, its fucking terrible for development.
 # Debian 12 doesn't ship a proper version of Clang or Binaryen.
 
-# To install Clang 12:
-# $ apt install clang-20 clang-tools-20 clang-20-doc libclang-common-20-dev libclang-20-dev libclang1-20 clang-format-20 python3-clang-20 clangd-20 clang-tidy-20
+# To install Clang 20:
+# $ apt install clang-20 clang-tools-20 clang-20-doc libclang-common-20-dev libclang-20-dev libclang1-20 clang-format-20 python3-clang-20 clangd-20 clang-tidy-20 lld-20
 
 # To install a better version of Binaryen:
 # $ # not possible, which is why I have a gate below:
@@ -35,6 +36,7 @@ ifneq ($(DEBIAN_LSB),)
 	DEBIAN_RELEASE := $(shell lsb_release -sr 2> /dev/null)
 	ifeq ($(shell expr $(DEBIAN_RELEASE) \<= 12),1)
 		wasm-opt := echo
+		DFLAGS += --no-wasm-opt
 	endif
 endif
 
@@ -43,7 +45,7 @@ UFLAGS = -Iinclude -Isrc
 # https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(UFLAGS) \
-	-msimd128 -mbulk-memory
+	-msimd128 -mbulk-memory $(DFLAGS)
 
 # -matomics -Wl,--shared-memory to use shared memory
 

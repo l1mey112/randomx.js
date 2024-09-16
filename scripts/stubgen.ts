@@ -28,7 +28,7 @@ if (!file_wasm) {
 // extract all lines until end
 
 const obj = await $`wasm-objdump --section-offsets -d ${file_wasm}`.text()
-const funcs = obj.matchAll(new RegExp(/func\[\d+\] <(\w+)>:[\s\S]+?end/g))
+const funcs = obj.matchAll(new RegExp(/func.*?<(.*?)>:[\s\S]*?(?=\d.*? func|$)/g))
 
 console.log('#pragma once')
 console.log()
@@ -51,7 +51,7 @@ for (const func of funcs) {
 		continue
 	}
 
-	const stamps = func[0].split('\n').splice(1)
+	const stamps = func[0].trim().split('\n').splice(1)
 
 	// 000003: 03 7e  | local[2..4] type=i64
 	// extract the hex, then extract everything after pipe
@@ -77,7 +77,8 @@ for (const func of funcs) {
 	}
 
 	for (const stamp of stamps) {
-		const [bytes, comment] = stamp.split('|').map((s) => s.trim())
+		let [bytes, raw_comment] = stamp.split('|')
+		bytes = bytes.trim()
 		const hex_spaces = bytes.split(' ').slice(1).join(' ')
 
 		// "03 7e" ->  "0x03, 0x7e,"
@@ -86,6 +87,7 @@ for (const func of funcs) {
 		// 0x10, 0x00, // call 0 <mul128hi>
 		//       ^^^^ -> _(0x00) - replace with function offset
 
+		const comment = raw_comment.trim()
 		if (comment.startsWith('call') || comment.startsWith('return_call')) {			
 			// call 1 <P_ssh_code>
 
@@ -111,7 +113,7 @@ for (const func of funcs) {
 		}
 
 		current_thunk.hex.push(hex)
-		current_thunk.comment.push(comment)
+		current_thunk.comment.push(raw_comment)
 	}
 	bytes_and_comments.push(current_thunk)
 
@@ -163,7 +165,7 @@ for (const func of funcs) {
 			const comment = thunk.comment[i]
 
 			const hex_string = hex_strings[i]
-			const line = `\t${hex_string.padEnd(largest_to_pad)} // ${comment}`
+			const line = `\t${hex_string.padEnd(largest_to_pad)} //${comment}`
 			console.log(line)
 		}
 
