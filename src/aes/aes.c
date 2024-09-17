@@ -56,10 +56,10 @@ void fillAes1Rx4(const uint8_t state[64], uint32_t output_size, uint8_t *buffer)
 	v128_t state0, state1, state2, state3;
 	v128_t key0, key1, key2, key3;
 
-	key0 = wasm_i32x4_make(AES_GEN_1R_KEY0);
-	key1 = wasm_i32x4_make(AES_GEN_1R_KEY1);
-	key2 = wasm_i32x4_make(AES_GEN_1R_KEY2);
-	key3 = wasm_i32x4_make(AES_GEN_1R_KEY3);
+	key0 = I32x2_MAKE_TRANSPOSE(AES_GEN_1R_KEY0);
+	key1 = I32x2_MAKE_TRANSPOSE(AES_GEN_1R_KEY1);
+	key2 = I32x2_MAKE_TRANSPOSE(AES_GEN_1R_KEY2);
+	key3 = I32x2_MAKE_TRANSPOSE(AES_GEN_1R_KEY3);
 
 	state0 = wasm_v128_load((v128_t *)state + 0);
 	state1 = wasm_v128_load((v128_t *)state + 1);
@@ -95,14 +95,14 @@ void fillAes4Rx4(const uint8_t state[64], uint32_t output_size, uint8_t *buffer)
 	v128_t state0, state1, state2, state3;
 	v128_t key0, key1, key2, key3, key4, key5, key6, key7;
 
-	key0 = wasm_i32x4_make(AES_GEN_4R_KEY0);
-	key1 = wasm_i32x4_make(AES_GEN_4R_KEY1);
-	key2 = wasm_i32x4_make(AES_GEN_4R_KEY2);
-	key3 = wasm_i32x4_make(AES_GEN_4R_KEY3);
-	key4 = wasm_i32x4_make(AES_GEN_4R_KEY4);
-	key5 = wasm_i32x4_make(AES_GEN_4R_KEY5);
-	key6 = wasm_i32x4_make(AES_GEN_4R_KEY6);
-	key7 = wasm_i32x4_make(AES_GEN_4R_KEY7);
+	key0 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY0);
+	key1 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY1);
+	key2 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY2);
+	key3 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY3);
+	key4 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY4);
+	key5 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY5);
+	key6 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY6);
+	key7 = I32x2_MAKE_TRANSPOSE(AES_GEN_4R_KEY7);
 
 	state0 = wasm_v128_load((v128_t *)state + 0);
 	state1 = wasm_v128_load((v128_t *)state + 1);
@@ -161,10 +161,10 @@ void hashAes1Rx4(const void *input, uint32_t input_size, uint8_t hash[64]) {
 	v128_t in0, in1, in2, in3;
 
 	// intial state
-	state0 = wasm_i32x4_make(AES_HASH_1R_STATE0);
-	state1 = wasm_i32x4_make(AES_HASH_1R_STATE1);
-	state2 = wasm_i32x4_make(AES_HASH_1R_STATE2);
-	state3 = wasm_i32x4_make(AES_HASH_1R_STATE3);
+	state0 = I32x2_MAKE_TRANSPOSE(AES_HASH_1R_STATE0);
+	state1 = I32x2_MAKE_TRANSPOSE(AES_HASH_1R_STATE1);
+	state2 = I32x2_MAKE_TRANSPOSE(AES_HASH_1R_STATE2);
+	state3 = I32x2_MAKE_TRANSPOSE(AES_HASH_1R_STATE3);
 
 	// process 64 bytes at a time in 4 lanes
 	while (inptr < input_end) {
@@ -182,8 +182,8 @@ void hashAes1Rx4(const void *input, uint32_t input_size, uint8_t hash[64]) {
 	}
 
 	// two extra rounds to achieve full diffusion
-	v128_t xkey0 = wasm_i32x4_make(AES_HASH_1R_XKEY0);
-	v128_t xkey1 = wasm_i32x4_make(AES_HASH_1R_XKEY1);
+	v128_t xkey0 = I32x2_MAKE_TRANSPOSE(AES_HASH_1R_XKEY0);
+	v128_t xkey1 = I32x2_MAKE_TRANSPOSE(AES_HASH_1R_XKEY1);
 
 	state0 = soft_aesenc(state0, xkey0);
 	state1 = soft_aesdec(state1, xkey0);

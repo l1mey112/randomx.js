@@ -4,8 +4,11 @@
 #include "blake2b/blake2b.h"
 #include "dataset/cache.h"
 #include "jit/ssh.h"
+#include "jit/jit.h"
+#include "aes/aes.h"
 
 #include <stdint.h>
+#include <wasm_simd128.h>
 
 static uint8_t scratch[16 * 1024];
 static uint8_t cache[RANDOMX_ARGON_MEMORY * 1024];
@@ -75,4 +78,32 @@ WASM_EXPORT("ssh_generate_hash256")
 void export_ssh_generate(void) {
 	ssh_generate(BLAKE2B_GEN_S, SSH);
 	blake2b(scratch, 32, SSH->instructions, sizeof(rx_inst_t) * SSH->size);
+}
+
+WASM_EXPORT("jit_reciprocal")
+uint64_t export_jit_reciprocal(uint64_t divisor) {
+	return jit_reciprocal(divisor);
+}
+
+WASM_EXPORT("fillAes1Rx4")
+void export_fillAes1Rx4(void) {
+	uint8_t state[64] = {};
+	memcpy(state, scratch, 64);
+	fillAes1Rx4(state, 64, scratch);
+}
+
+WASM_EXPORT("soft_aesenc")
+void export_soft_aesenc(void) {
+	v128_t state = wasm_v128_load(scratch);
+	v128_t key = wasm_v128_load(scratch + 16);
+	v128_t result = soft_aesenc(state, key);
+	wasm_v128_store(scratch, result);
+}
+
+WASM_EXPORT("soft_aesdec")
+void export_soft_aesdec(void) {
+	v128_t state = wasm_v128_load(scratch);
+	v128_t key = wasm_v128_load(scratch + 16);
+	v128_t result = soft_aesdec(state, key);
+	wasm_v128_store(scratch, result);
 }

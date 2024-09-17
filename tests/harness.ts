@@ -28,6 +28,14 @@ type Module = {
 	// SuperscalarHash
 	ssh_init_newblake: (key_length: number) => void
 	ssh_generate_hash256: () => void
+
+	// JIT
+	jit_reciprocal: (divisor: bigint) => bigint
+
+	// AES
+	fillAes1Rx4(): void
+	soft_aesenc(): void
+	soft_aesdec(): void
 }
 
 const m = await WebAssembly.instantiate(wasm, { e: { ch: env_npf_putc } })
@@ -79,4 +87,30 @@ export const long1024 = (data: Uint8Array) => {
 	buffer.set(data)
 	module.blake2b_1024(data.length)
 	return buffer.slice(0, 1024)
+}
+
+export const fillAes1Rx4 = (data: Uint8Array) => {
+	buffer.set(data)
+	module.fillAes1Rx4()
+	return buffer.slice(0, 64)
+}
+
+export const soft_aesenc = (data: Uint8Array, key: Uint8Array) => {
+	const data_key = new Uint8Array(32)
+	data_key.set(data.slice(0, 16), 0)
+	data_key.set(key.slice(0, 16), 16)
+	
+	buffer.set(data_key)
+	module.soft_aesenc()
+	return buffer.slice(0, 16)
+}
+
+export const soft_aesdec = (data: Uint8Array, key: Uint8Array) => {
+	const data_key = new Uint8Array(32)
+	data_key.set(data.slice(0, 16), 0)
+	data_key.set(key.slice(0, 16), 16)
+	
+	buffer.set(data_key)
+	module.soft_aesdec()
+	return buffer.slice(0, 16)
 }

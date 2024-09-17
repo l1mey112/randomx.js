@@ -1,4 +1,5 @@
 #include "freestanding.h"
+#include "aes.h"
 
 #include <stdint.h>
 #include <wasm_simd128.h>
@@ -291,7 +292,7 @@ v128_t soft_aesenc(v128_t in, v128_t key) {
 	s2 = wasm_i32x4_extract_lane(in, 1); // y
 	s3 = wasm_i32x4_extract_lane(in, 0); // x
 
-	v128_t out = wasm_i32x4_make(
+	v128_t out = I32x2_MAKE_TRANSPOSE_(
 		(lut_enc0[s0 & 0xff] ^ lut_enc1[(s3 >> 8) & 0xff] ^ lut_enc2[(s2 >> 16) & 0xff] ^ lut_enc3[s1 >> 24]),
 		(lut_enc0[s1 & 0xff] ^ lut_enc1[(s0 >> 8) & 0xff] ^ lut_enc2[(s3 >> 16) & 0xff] ^ lut_enc3[s2 >> 24]),
 		(lut_enc0[s2 & 0xff] ^ lut_enc1[(s1 >> 8) & 0xff] ^ lut_enc2[(s0 >> 16) & 0xff] ^ lut_enc3[s3 >> 24]),
@@ -309,7 +310,7 @@ v128_t soft_aesdec(v128_t in, v128_t key) {
 	s2 = wasm_i32x4_extract_lane(in, 1); // y
 	s3 = wasm_i32x4_extract_lane(in, 0); // x
 
-	v128_t out = wasm_i32x4_make(
+	v128_t out = I32x2_MAKE_TRANSPOSE_(
 		(lut_dec0[s0 & 0xff] ^ lut_dec1[(s1 >> 8) & 0xff] ^ lut_dec2[(s2 >> 16) & 0xff] ^ lut_dec3[s3 >> 24]),
 		(lut_dec0[s1 & 0xff] ^ lut_dec1[(s2 >> 8) & 0xff] ^ lut_dec2[(s3 >> 16) & 0xff] ^ lut_dec3[s0 >> 24]),
 		(lut_dec0[s2 & 0xff] ^ lut_dec1[(s3 >> 8) & 0xff] ^ lut_dec2[(s0 >> 16) & 0xff] ^ lut_dec3[s1 >> 24]),
