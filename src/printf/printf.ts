@@ -1,5 +1,5 @@
 let p = 0
-const buf = new Uint32Array(512)
+const buf = new Uint32Array(1024)
 
 // env.ch
 export function env_npf_putc(ch: number) {
@@ -9,11 +9,13 @@ export function env_npf_putc(ch: number) {
 		for (let i = 0; i < p; i++) {
 			str += String.fromCharCode(buf[i])
 		}
-		console.log(str)
+		p = 0
 
 		if (ch === 0x0A) {
-			p = 0
+			console.log(str)
 			return
+		} else {
+			console.log(str + '\\n')
 		}
 	}
 	buf[p++] = ch

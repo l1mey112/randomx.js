@@ -36,6 +36,9 @@ type Module = {
 	fillAes1Rx4(): void
 	soft_aesenc(): void
 	soft_aesdec(): void
+
+	// VM
+	program_VM(hash_length: number): number
 }
 
 const m = await WebAssembly.instantiate(wasm, { e: { ch: env_npf_putc } })
@@ -113,4 +116,39 @@ export const soft_aesdec = (data: Uint8Array, key: Uint8Array) => {
 	buffer.set(data_key)
 	module.soft_aesdec()
 	return buffer.slice(0, 16)
+}
+
+export const program_vm = (data: Uint8Array) => {
+	buffer.set(data)
+	const ptr = module.program_VM(data.length)
+	const dv = new DataView(module.memory.buffer, ptr)
+
+	// DataView defaulting to big-endian is a fucking crime
+
+	return {
+		r: new BigUint64Array(module.memory.buffer, ptr + 0, 8),
+		f: new Float64Array(module.memory.buffer, ptr + 64, 8),
+		e: new Float64Array(module.memory.buffer, ptr + 128, 8),
+		a: new Float64Array(module.memory.buffer, ptr + 192, 8),
+
+		// reinterpreted
+		f_bin: new BigUint64Array(module.memory.buffer, ptr + 64, 8),
+		e_bin: new BigUint64Array(module.memory.buffer, ptr + 128, 8),
+		a_bin: new BigUint64Array(module.memory.buffer, ptr + 192, 8),
+
+		emask: new BigUint64Array(module.memory.buffer, ptr + 256, 2),
+		mmask: new BigUint64Array(module.memory.buffer, ptr + 272, 2),
+
+		fprc: dv.getUint32(288, true),
+
+		ma: dv.getUint32(292, true),
+		mx: dv.getUint32(296, true),
+
+		read_reg0: dv.getUint32(300, true),
+		read_reg1: dv.getUint32(304, true),
+		read_reg2: dv.getUint32(308, true),
+		read_reg3: dv.getUint32(312, true),
+
+		dataset_offset: dv.getBigUint64(320, true),
+	}
 }

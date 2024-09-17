@@ -13,10 +13,10 @@
 
 // 48 KiB, average program size is 32 KiBs
 // also use for key, 0-60
-uint8_t jit_buffer[48 * 1024];
+static uint8_t jit_buffer[48 * 1024];
 
-uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
-ss_program_t programs[RANDOMX_CACHE_ACCESSES];
+static uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
+static ss_program_t programs[RANDOMX_CACHE_ACCESSES];
 
 WASM_EXPORT("b")
 void *jit() {

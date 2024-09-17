@@ -107,3 +107,22 @@ void export_soft_aesdec(void) {
 	v128_t result = soft_aesdec(state, key);
 	wasm_v128_store(scratch, result);
 }
+
+
+WASM_EXPORT("program_VM")
+void *export_program_VM(uint32_t hash_length) {
+	static uint8_t S[64]; // 512-bit seed - state of the generator gen1 + gen4
+	static alignas(16) rx_program_t P; // program buffer
+	static alignas(16) rx_vm_t VM;
+	static uint8_t scratchpad[RANDOMX_SCRATCHPAD_L3];
+
+	memset(&VM, 0, sizeof(VM));
+
+	blake2b(S, 64, scratch, hash_length); // seed generation
+	// S now contains the seed
+	fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
+	fillAes4Rx4(S, sizeof(P), (void *)&P); // program generation
+	vm_program(&VM, &P); // program VM
+
+	return &VM;
+}

@@ -8,10 +8,10 @@
 #include <stdint.h>
 
 // TODO: figure out how big this should be
-uint8_t jit_buffer[128 * 1024];
+static uint8_t jit_buffer[128 * 1024];
 
-blake2b_state *SS; // seed state
-uint8_t program_count;
+static blake2b_state *SS; // seed state
+static uint8_t program_count;
 
 WASM_EXPORT("i")
 void *init(uint8_t f) {
@@ -44,7 +44,7 @@ void finalise_hash() {
 
 	// reset rounding mode
 	// rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
-	VM.fprc = 0;
+	memset(&VM, 0, sizeof(VM));
 	program_count = RANDOMX_PROGRAM_COUNT;
 }
 
