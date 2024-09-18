@@ -34,24 +34,12 @@ export function randomx_create_vm(cache: Cache) {
 		},
 	})
 
-	const SCRATCH_SIZE = 64 * 1024 // 64 KiBs (less than the real amount)
+	const SCRATCH_SIZE = 16 * 1024
 
 	const exports = wi.exports as VmModule
 	const scratch_ptr = exports.i(_feature)
 	const memory = exports.memory
 	const scratch = new Uint8Array(memory.buffer, scratch_ptr, SCRATCH_SIZE)
-
-	// install seed S from H
-	function install_seed(scratch: Uint8Array, H: Uint8Array) {
-		exports.I()
-		let p = 0
-		while (p < H.length) {
-			const chunk = H.subarray(p, p + SCRATCH_SIZE)
-			p += SCRATCH_SIZE
-			scratch.set(chunk)
-			exports.H(chunk.length)
-		}
-	}
 
 	const superscalarhash = randomx_superscalarhash(cache)
 	const jit_imports = {
@@ -61,7 +49,22 @@ export function randomx_create_vm(cache: Cache) {
 		},		
 	}
 
-	function iterate_vm() {
+	function hash(H: Uint8Array | string): Uint8Array {
+		if (typeof H === 'string') {
+			H = new TextEncoder().encode(H)
+		}
+
+		// install seed S from H
+		exports.I()
+		let p = 0
+		while (p < H.length) {
+			const chunk = H.subarray(p, p + SCRATCH_SIZE)
+			p += SCRATCH_SIZE
+			scratch.set(chunk)
+			exports.H(chunk.length)
+		}
+		exports.R()
+
 		do {
 			const jit_size = exports.Ri()
 			const jit_buffer = new Uint8Array(memory.buffer, scratch_ptr, jit_size)
@@ -70,15 +73,7 @@ export function randomx_create_vm(cache: Cache) {
 			const jit_exports = jit_wi.exports as { d: () => void }
 			jit_exports.d()
 		} while (exports.Rf())
-	}
 
-	function hash(H: Uint8Array | string): Uint8Array {
-		if (typeof H === 'string') {
-			H = new TextEncoder().encode(H)
-		}
-		install_seed(scratch, H)
-		exports.R()
-		iterate_vm()
 		return new Uint8Array(scratch.subarray(0, 32)) // Hash256
 	}
 

@@ -7,8 +7,8 @@
 
 #include <stdint.h>
 
-// TODO: figure out how big this should be
-static uint8_t jit_buffer[128 * 1024];
+// average RandomX WASM module size is 10 KiBs
+static uint8_t jit_buffer[16 * 1024];
 
 static blake2b_state *SS; // seed state
 static uint8_t program_count;

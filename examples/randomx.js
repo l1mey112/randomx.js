@@ -1,4 +1,4 @@
-var { randomx_create_vm, randomx_init_cache, randomx_jit_feature } = require('../dist/cjs/index')
+const { randomx_create_vm, randomx_init_cache, randomx_jit_feature } = require('../dist/cjs/index')
 
 console.log('JIT using:', randomx_jit_feature())
 
