@@ -1,11 +1,15 @@
 import { randomx_superscalarhash, type Cache } from '../dataset/dataset'
 import { jit_detect, jit_feature_stringify, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
+// @ts-ignore
 import wasm from './vm.wasm'
 
 let _wasm: WebAssembly.Module | null = null
 const _feature: JitFeature = jit_detect()
-console.log('feature:', jit_feature_stringify(_feature))
+
+export function randomx_jit_feature() {
+	return jit_feature_stringify(_feature)
+}
 
 // new virtual machine
 export function randomx_create_vm(cache: Cache) {
@@ -50,7 +54,7 @@ export function randomx_create_vm(cache: Cache) {
 	}
 
 	const superscalarhash = randomx_superscalarhash(cache)
-	const jit_imports: WebAssembly.Imports = {
+	const jit_imports = {
 		e: {
 			m: memory,
 			d: superscalarhash,
@@ -61,10 +65,6 @@ export function randomx_create_vm(cache: Cache) {
 		do {
 			const jit_size = exports.Ri()
 			const jit_buffer = new Uint8Array(memory.buffer, scratch_ptr, jit_size)
-			console.log(`iterate_vm jit_size: 0x${scratch_ptr.toString(16)} ${jit_size}`)
-
-			Bun.write('vm.wasm', jit_buffer).then(() => console.log('write vm.wasm', jit_size / 1024))
-
 			const jit_wm = new WebAssembly.Module(jit_buffer)
 			const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)
 			const jit_exports = jit_wi.exports as { d: () => void }
@@ -72,11 +72,10 @@ export function randomx_create_vm(cache: Cache) {
 		} while (exports.Rf())
 	}
 
-	function hash(H: Uint8Array | string): Uint8Array | string {
+	function hash(H: Uint8Array | string): Uint8Array {
 		if (typeof H === 'string') {
 			H = new TextEncoder().encode(H)
 		}
-		console.log(`hash H:`, H)
 		install_seed(scratch, H)
 		exports.R()
 		iterate_vm()

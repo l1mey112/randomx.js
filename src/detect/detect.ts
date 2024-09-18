@@ -1,4 +1,6 @@
+// @ts-ignore
 import fma from './fma.wasm'
+// @ts-ignore
 import simd from './simd.wasm'
 
 export type JitFeature = number
@@ -34,7 +36,7 @@ export function jit_feature_stringify(feature: JitFeature): string {
 	let s = 'baseline'
 
 	if (feature & JIT_RELAXED_SIMD) {
-		s += '+ relaxed-simd'
+		s += ' + relaxed-simd'
 	}
 
 	if (feature & JIT_FMA) {

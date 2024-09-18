@@ -1,5 +1,6 @@
 import { env_npf_putc } from '../printf/printf'
 import { adjust_imported_shared_memory } from '../wasm_prefix'
+// @ts-ignore
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
 
@@ -45,8 +46,6 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 
 	const jit_size = exports.K(K.length) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
-
-	Bun.write('ssh.wasm', jit_buffer).then(() => console.log('write ssh.wasm', jit_size / 1024))
 
 	return {
 		memory,
