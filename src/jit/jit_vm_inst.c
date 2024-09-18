@@ -50,10 +50,10 @@
 // i32.and
 // i32.const $scratchpad
 // i32.add
-#define SCRATCHPAD_PTR_L3(inst) \
+#define SCRATCHPAD_PTR_L3(inst)        \
 	WASM_U8_THUNK({0x42});             \
 	WASM_I64(IMM_SEXT64(inst->imm32)); \
-	WASM_U8_THUNK({0x7c, 0xa7, 0x41});       \
+	WASM_U8_THUNK({0x7c, 0xa7, 0x41}); \
 	WASM_I64(SCRATCHPAD_L3_MASK);      \
 	WASM_U8_THUNK({0x71, 0x41});       \
 	WASM_I64((int64_t)scratchpad);     \
@@ -464,13 +464,26 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 
 			int wdst = inst->dst < 4 ? F(inst->dst) : E(inst->dst - 4);
 
-			// (dst0, dst1) = (dst1, dst0)
 			WASM_U8_THUNK({
 				0x20, wdst,                                           // local.get $dest
 				0xfd, 0x0c, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, // v128.const 0x0b0a0908 0x0f0e0d0c 0x03020100 0x07060504
 				0x0f, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, //
-				0xfd, 0x0e,                                           // i8x16.swizzle
-				0x21, wdst,                                           // local.set $dest
+			});
+
+			// (dst0, dst1) = (dst1, dst0)
+			if (jit_feature & JIT_RELAXED_SIMD) {
+				// using relaxed_swizzle instead of swizzle will only really help baseline jits
+				WASM_U8_THUNK({
+					0xfd, 0x80, 0x02, // i8x16.relaxed_swizzle
+				});
+			} else {
+				WASM_U8_THUNK({
+					0xfd, 0x0e, // i8x16.swizzle
+				});
+			}
+
+			WASM_U8_THUNK({
+				0x21, wdst, // local.set $dest
 			});
 			break;
 		}
