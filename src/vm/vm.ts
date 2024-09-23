@@ -28,11 +28,12 @@ export function randomx_create_vm(cache: Cache) {
 		_wasm = new WebAssembly.Module(wasm)
 	}
 
-	const wi = new WebAssembly.Instance(_wasm, {
+	const wi_imports = NDEBUG ? {} : {
 		e: {
 			ch: env_npf_putc
 		},
-	})
+	}
+	const wi = new WebAssembly.Instance(_wasm, wi_imports as Record<string, any>)
 
 	const SCRATCH_SIZE = 16 * 1024
 

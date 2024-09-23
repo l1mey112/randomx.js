@@ -1,5 +1,7 @@
 #include "freestanding.h"
 
+#ifndef NDEBUG
+
 #define NANOPRINTF_IMPLEMENTATION
 #include "nanoprintf.h"
 
@@ -21,3 +23,5 @@ __attribute__((minsize)) int snprintf(char *restrict str, unsigned long size, co
 	va_end(args);
 	return ret;
 }
+
+#endif

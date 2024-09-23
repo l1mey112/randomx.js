@@ -20,7 +20,7 @@ const initial = randomx.calculate_hex_hash('Lorem ipsum dolor sit amet')
 const samples = []
 
 let i = 0
-while (true) {
+while (i < 100) {
 	const time_now = performance.now()
 	const hash = randomx.calculate_hex_hash('Lorem ipsum dolor sit amet')
 	const time = performance.now() - time_now

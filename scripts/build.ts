@@ -3,8 +3,9 @@
 import esbuild from 'esbuild'
 import type { BuildOptions } from 'esbuild'
 import { $ } from 'bun'
+import { binayloader } from './binaryloader'
 
-const k = await $`make`.nothrow() // make all
+/* const k = await $`make -j$(nproc)`.nothrow() // make all
 
 if (k.exitCode !== 0) {
 	process.exit(k.exitCode)
@@ -49,4 +50,10 @@ await Promise.all([
 	$`bunx dts-bundle-generator -o dist/index.d.ts --no-banner src/index.ts`.nothrow().then(
 		() => $`cp dist/index.d.ts dist/cjs/index.d.ts; cp dist/index.d.ts dist/esm/index.d.ts`
 	),
-])
+]) */
+
+await Bun.build({
+	entrypoints: ['src/index.ts'],
+	outdir: 'dist',
+	plugins: [binayloader],
+})

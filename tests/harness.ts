@@ -39,6 +39,9 @@ type Module = {
 
 	// VM
 	program_VM(hash_length: number): number
+
+	// benchmarks
+	call_overhead(): number
 }
 
 const m = await WebAssembly.instantiate(wasm, { e: { ch: env_npf_putc } })

@@ -108,7 +108,6 @@ void export_soft_aesdec(void) {
 	wasm_v128_store(scratch, result);
 }
 
-
 WASM_EXPORT("program_VM")
 void *export_program_VM(uint32_t hash_length) {
 	static uint8_t S[64]; // 512-bit seed - state of the generator gen1 + gen4
@@ -125,4 +124,13 @@ void *export_program_VM(uint32_t hash_length) {
 	vm_program(&VM, &P); // program VM
 
 	return &VM;
+}
+
+WASM_EXPORT("call_overhead")
+int32_t export_call_overhead(void) {
+	static int32_t global;
+
+	global += 1;
+
+	return global;
 }
