@@ -48,10 +48,10 @@
 
 #define STRLEN_CONST(v) (sizeof(v "") - 1)
 
-#ifdef NDEBUG
-#define printf(...)
-#define snprintf(...)
-#else
+#if !PRODUCTION
 int printf(const char *restrict format, ...) __attribute__((format(printf, 1, 2)));
 int snprintf(char *restrict str, unsigned long size, const char *restrict format, ...) __attribute__((format(printf, 3, 4)));
+#else
+#define printf(...)
+#define snprintf(...)
 #endif

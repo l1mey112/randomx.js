@@ -1,5 +1,6 @@
 import { env_npf_putc } from '../printf/printf'
 import { adjust_imported_shared_memory } from '../wasm_prefix'
+
 // @ts-ignore
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'

@@ -1,6 +1,8 @@
 import { randomx_superscalarhash, type Cache } from '../dataset/dataset'
 import { jit_detect, jit_feature_stringify, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
+import PRODUCTION from '../production'
+
 // @ts-ignore
 import wasm from './vm.wasm'
 
@@ -28,10 +30,10 @@ export function randomx_create_vm(cache: Cache) {
 		_wasm = new WebAssembly.Module(wasm)
 	}
 
-	const wi_imports = NDEBUG ? {} : {
+	const wi_imports = PRODUCTION ? {} : {
 		e: {
 			ch: env_npf_putc
-		},
+		}
 	}
 	const wi = new WebAssembly.Instance(_wasm, wi_imports as Record<string, any>)
 
