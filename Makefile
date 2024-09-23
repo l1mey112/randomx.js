@@ -42,7 +42,14 @@ ifneq ($(DEBIAN_LSB),)
 	endif
 endif
 
-UFLAGS = -Iinclude -Isrc
+ifeq ($(PRODUCTION),)
+	PRODUCTION := 0
+endif
+
+# PRODUCTION flag
+$(info PRODUCTION=$(PRODUCTION))
+
+UFLAGS = -Iinclude -Isrc -DPRODUCTION=$(PRODUCTION)
 
 # https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192

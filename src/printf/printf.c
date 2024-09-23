@@ -1,6 +1,6 @@
 #include "freestanding.h"
 
-#ifndef NDEBUG
+#if !PRODUCTION
 
 #define NANOPRINTF_IMPLEMENTATION
 #include "nanoprintf.h"

@@ -24,6 +24,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
+    "typeRoots": [] // ignore node types and bun types when building, this build is completely freestanding
   },
   "include": ["wasm.d.ts", "tests/**/*.ts", "src/**/*.ts", "include/**/*.ts"],
 }
