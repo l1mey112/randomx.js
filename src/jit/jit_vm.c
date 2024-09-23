@@ -8,10 +8,10 @@
 
 #include <stdint.h>
 
-#define FUNC_OFFSET 2
+#define FUNC_OFFSET FIDX(1)
 #include "stubs/mulh.h"
 
-#define FUNC_OFFSET 4
+#define FUNC_OFFSET FIDX(3)
 #include "stubs/semifloat.h"
 
 uint32_t ptr_to_tmp(void *ptr, uint8_t *buf) {
@@ -309,7 +309,7 @@ uint32_t jit_vm_main(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t 
 	// 4. The 256 instructions stored in the Program Buffer are executed.
 	{
 		static jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE];
-		jit_vm_insts_decode(P->program, jump_desc); // mutate P->program, decode instructions, cover assertions
+		jit_vm_insts_decode(P->program, jump_desc);              // mutate P->program, decode instructions, cover assertions
 		p += jit_vm_insts(P->program, jump_desc, scratchpad, p); // JIT the code
 	}
 
@@ -478,8 +478,13 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#type-section
 	WASM_SECTION(WASM_SECTION_TYPE, {
+		// clang-format off
 		WASM_U8_THUNK({
+#if !PRODUCTION
+			6, // function types = vec(6)
+#else
 			5, // function types = vec(5)
+#endif
 
 			// function type 0 : () -> ()
 			0x60,
@@ -522,13 +527,31 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			WASM_TYPE_V128,
 			1, // 1 return value
 			WASM_TYPE_V128,
+
+#if !PRODUCTION
+			// function type 5 : (i32, i32, i32, i32, i32) -> ()
+			0x60,
+			5, // 5 parameters
+			WASM_TYPE_I32,
+			WASM_TYPE_I32,
+			WASM_TYPE_I32,
+			WASM_TYPE_I32,
+			WASM_TYPE_I32,
+			0, // 0 return values
+#endif
 		});
+		// clang-format on
 	});
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-importsec
 	WASM_SECTION(WASM_SECTION_IMPORT, {
+		// clang-format off
 		WASM_U8_THUNK({
+#if !PRODUCTION
+			3, // imports = vec(3)
+#else
 			2, // imports = vec(2)
+#endif
 
 			// import 0: e.m
 			1, 'e', 1, 'm', // name = "e.m"
@@ -539,11 +562,21 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			1, 'e', 1, 'd', // name = "e.d"
 			0x00,           // func
 			1,              // (i64) -> (i64, i64, i64, i64, i64, i64, i64, i64)
+
+#if !PRODUCTION
+			// import 2: e.b (breakpoint)
+			1, 'e', 1, 'b', // name = "e.b"
+			0x00,           // func
+			5,              // (ic: i32, mx: i32, ma: i32, sp_addr0: i32, sp_addr1: i32) -> ()
+#endif
 		});
+		// clang-format on
 	});
 
-	// import 0: e.d - function index 0
-	// (all other function idxs are shifted by 1, amount of imports)
+	// import 0: e.d - function idx 0
+	// import 1: e.b - function idx 1 (if !PRODUCTION)
+	// (all other function idxs are shifted by 1 or 2, the amount of imports)
+	// - use FIDX() macro for that
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcsec
 	WASM_SECTION(WASM_SECTION_FUNCTION, {
@@ -607,9 +640,9 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			1, // exports = vec(1)
 
 			// export 0: d
-			1, 'd', // name = "d"
-			0x00,   // export kind = func
-			1,      // function index = 1
+			1, 'd',  // name = "d"
+			0x00,    // export kind = func
+			FIDX(0), // function index = 0
 		});
 	});
 
@@ -620,43 +653,43 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 			// elem 0: fadd
 			0x02,
-			0,             // table index = 0
-			0x41, 0, 0x0b, // offset = i32.const 0
-			0x00,          // funcref
-			4,             // elements = vec(4)
-			4, 5, 6, 7,    // fprc_0..fprc_3
+			0,                                  // table index = 0
+			0x41, 0, 0x0b,                      // offset = i32.const 0
+			0x00,                               // funcref
+			4,                                  // elements = vec(4)
+			FIDX(3), FIDX(4), FIDX(5), FIDX(6), // fprc_0..fprc_3
 
 			// elem 1: fsub
 			0x02,
-			1,             // table index = 1
-			0x41, 0, 0x0b, // offset = i32.const 0
-			0x00,          // funcref
-			4,             // elements = vec(4)
-			8, 9, 10, 11,  // fprc_0..fprc_3
+			1,                                   // table index = 1
+			0x41, 0, 0x0b,                       // offset = i32.const 0
+			0x00,                                // funcref
+			4,                                   // elements = vec(4)
+			FIDX(7), FIDX(8), FIDX(9), FIDX(10), // fprc_0..fprc_3
 
 			// elem 2: fmul
 			0x02,
-			2,              // table index = 2
-			0x41, 0, 0x0b,  // offset = i32.const 0
-			0x00,           // funcref
-			4,              // elements = vec(4)
-			12, 13, 14, 15, // fprc_0..fprc_3
+			2,                                      // table index = 2
+			0x41, 0, 0x0b,                          // offset = i32.const 0
+			0x00,                                   // funcref
+			4,                                      // elements = vec(4)
+			FIDX(11), FIDX(12), FIDX(13), FIDX(14), // fprc_0..fprc_3
 
 			// elem 3: fdiv
 			0x02,
-			3,              // table index = 3
-			0x41, 0, 0x0b,  // offset = i32.const 0
-			0x00,           // funcref
-			4,              // elements = vec(4)
-			16, 17, 18, 19, // fprc_0..fprc_3
+			3,                                      // table index = 3
+			0x41, 0, 0x0b,                          // offset = i32.const 0
+			0x00,                                   // funcref
+			4,                                      // elements = vec(4)
+			FIDX(15), FIDX(16), FIDX(17), FIDX(18), // fprc_0..fprc_3
 
 			// elem 4: fsqrt
 			0x02,
-			4,              // table index = 4
-			0x41, 0, 0x0b,  // offset = i32.const 0
-			0x00,           // funcref
-			4,              // elements = vec(4)
-			20, 21, 22, 23, // fprc_0..fprc_3
+			4,                                      // table index = 4
+			0x41, 0, 0x0b,                          // offset = i32.const 0
+			0x00,                                   // funcref
+			4,                                      // elements = vec(4)
+			FIDX(19), FIDX(20), FIDX(21), FIDX(22), // fprc_0..fprc_3
 		});
 	});
 
@@ -664,7 +697,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	WASM_SECTION(WASM_SECTION_CODE, {
 		WASM_U8(23); // functions = vec(23)
 
-		// function 0 - (actual function idx space 0 + 1 import)
+		// function 0 - main (idx 0)
 		WASM_U32_PATCH({
 			WASM_U8_THUNK({
 				5, // local entries = vec(3)
@@ -681,14 +714,14 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			WASM_U8(0x0b); // end
 		});
 
-		// function 1 - mul128hi (idx 2)
+		// function 1 - mul128hi (idx 1)
 		WASM_U32_WITH_STUB(STUB_MUL128HI);
 
-		// function 2 - imul128hi (idx 3)
+		// function 2 - imul128hi (idx 2)
 		WASM_U32_WITH_STUB(STUB_IMUL128HI);
 
 		// 3 fprc x 5 operations = 15 stubs
-		// function 3..22 - fprc_0..fprc_3 (idx 4..23)
+		// function 3..22 - fprc_0..fprc_3 (idx 3..22)
 		WASM_U32_WITH_STUB(STUB_FADD_0);
 		WASM_U32_WITH_STUB(STUB_FADD_1);
 		WASM_U32_WITH_STUB(STUB_FADD_2);
@@ -737,6 +770,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	});
 
 	// assign local names for debug purposes
+#if !PRODUCTION
 
 #define LOCAL_NAME(idx, name) \
 	WASM_U8(idx);             \
@@ -755,9 +789,9 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			// vec(function_idx, name)
 			WASM_U8(2); // entries = vec(1)
 
-			WASM_U8(2);
+			WASM_U8($MUL128HI);
 			WASM_U8_SHORT_NAME("mul128hi");
-			WASM_U8(3);
+			WASM_U8($IMUL128HI);
 			WASM_U8_SHORT_NAME("imul128hi");
 		});
 
@@ -828,6 +862,8 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	});
 
 #undef LOCAL_NAME
+
+#endif
 
 	THUNK_END;
 }

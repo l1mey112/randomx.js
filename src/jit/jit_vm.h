@@ -1,11 +1,17 @@
 #pragma once
 
-#include "freestanding.h"
 #include "configuration.h"
+#include "freestanding.h"
 #include "inst.h"
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#if !PRODUCTION
+#define FIDX(x) (x + 2) // e.d (superscalarhash), e.b (breakpoint)
+#else
+#define FIDX(x) (x + 1) // e.d (superscalarhash)
+#endif
 
 // locals
 #define R(i) (0 + (i))
@@ -26,14 +32,14 @@
 #define $fprc 0
 
 // functions
-#define $MUL128HI 2
-#define $IMUL128HI 3
+#define $MUL128HI FIDX(1)
+#define $IMUL128HI FIDX(2)
 
 typedef enum jit_inst_kind_t jit_inst_kind_t;
 typedef struct jit_jump_desc_t jit_jump_desc_t;
 
 struct jit_jump_desc_t {
-	bool target;   // false if not a target, true if a target
+	bool target; // false if not a target, true if a target
 
 	// supporting data for CBRANCH instructions
 	uint32_t mask; // if (dst & mask) == 0, then branch

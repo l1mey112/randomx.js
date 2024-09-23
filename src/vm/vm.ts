@@ -45,11 +45,17 @@ export function randomx_create_vm(cache: Cache) {
 	const scratch = new Uint8Array(memory.buffer, scratch_ptr, SCRATCH_SIZE)
 
 	const superscalarhash = randomx_superscalarhash(cache)
-	const jit_imports = {
+	const jit_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {
 		e: {
 			m: memory,
 			d: superscalarhash,
-		},		
+		}
+	}
+
+	if (!PRODUCTION) {
+		jit_imports.e.b = function () {
+			console.log('VM: breakpoint', arguments)
+		}
 	}
 
 	function hash(H: Uint8Array | string): Uint8Array {

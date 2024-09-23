@@ -3,6 +3,3 @@ UseTab: AlignWithSpaces
 IndentWidth: 4
 TabWidth: 4
 ColumnLimit: 0
-
-# AlignTrailingComments:
-# 	Kind: Never
