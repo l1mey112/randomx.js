@@ -13,25 +13,25 @@ console.log(randomx.calculate_hash('hello world')) // Uint8Array
 
 > [RandomX](https://github.com/tevador/RandomX) is a proof-of-work (PoW) algorithm that is optimized for general-purpose CPUs. RandomX uses random code execution (hence the name) together with several memory-hard techniques to minimize the efficiency advantage of specialized hardware.
 
-```
-$ PRODUCTION=1 scripts/build.ts
-$ node examples/randomx.js
-JIT using: baseline + relaxed-simd
-cache construction time 579.7 ms
-average hashrate: 19.7 H/s
+```bash
+PRODUCTION=1 scripts/build.ts
+node examples/randomx.js
+# JIT using: baseline + relaxed-simd
+# cache construction time 579.7 ms
+# average hashrate: 19.7 H/s
 
-$ bun examples/randomx.js
-JIT using: baseline
-cache construction time 1071.8 ms
-average hashrate: 12.5 H/s
+bun examples/randomx.js
+# JIT using: baseline
+# cache construction time 1071.8 ms
+# average hashrate: 12.5 H/s
 
-$ node examples/randomx_threaded.js
-JIT using: baseline + relaxed-simd
-average hashrate: 160.9 H/s
+node examples/randomx_threaded.js
+# JIT using: baseline + relaxed-simd
+# average hashrate: 160.9 H/s
 
-$ node -v; bun -v
-v22.9.0
-1.1.29
+node -v; bun -v
+# v22.9.0
+# 1.1.29
 ```
 
 Hashrate was speculated to be 1 H/s per thread, this beats it at still a pitiful 20 H/s. On the same machine, 100 H/s per thread is achieved when mining in light/verification mode, so 5x slower ain't that bad. Mining with an initialised dataset (2 GiB allocation) is not supported (though easy to implement), no one on earth would give a webpage multiple gigabytes of memory. **Light/verification mode only, transparent threading is enabled by allocating the cache with the `shared` parameter.**
