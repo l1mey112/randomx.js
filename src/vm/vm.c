@@ -45,12 +45,11 @@ WASM_EXPORT("R")
 void finalise_hash() {
 	blake2b_finalise(SS, S);
 
-	// S now contains the seed
+	// S now contains the seed, modify it after scratchpad initialisation
 	fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
 
-	// reset rounding mode
-	// rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
-	memset(&VM, 0, sizeof(VM));
+	// reset rounding mode, rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
+	VM.fprc = 0;
 	program_count = RANDOMX_PROGRAM_COUNT;
 }
 
@@ -70,6 +69,9 @@ void finalise_hash() {
 WASM_EXPORT("Ri")
 uint32_t iterate_vm() {
 	assert(program_count != 0);
+
+	// set VM.r[0..7] to 0, everything else is initialised in vm_program and in the VM
+	memset(&VM.r, 0, sizeof(VM.r));
 
 	fillAes4Rx4(S, sizeof(P), (void *)&P); // program generation
 	vm_program(&VM, &P);
@@ -101,6 +103,7 @@ void final_vm_iteration() {
 }
 
 #if !PRODUCTION
+#if 0 // 1 to enable
 
 const char *inst_tos[] = {
 	[IADD_RS] = "IADD_RS",
@@ -146,7 +149,7 @@ void breakpoint(uint32_t ic, int pc, uint32_t mx, uint32_t ma, uint32_t sp_addr0
 
 	uint8_t scratchpad_hash[32]; // Hash256(scratchpad)
 
-#define C(x) *(uint64_t*)&(x)
+#define C(x) *(uint64_t *)&(x)
 	printf("  r0: %016llx r1: %016llx r2: %016llx r3: %016llx\n", VM.r[0], VM.r[1], VM.r[2], VM.r[3]);
 	printf("  r4: %016llx r5: %016llx r6: %016llx r7: %016llx\n", VM.r[4], VM.r[5], VM.r[6], VM.r[7]);
 	// nanoprintf doesn't properly support %a format specifier
@@ -159,7 +162,7 @@ void breakpoint(uint32_t ic, int pc, uint32_t mx, uint32_t ma, uint32_t sp_addr0
 		printf("  a0: %016llx %016llx a1: %016llx %016llx\n", C(VM.a[0].lo), C(VM.a[0].hi), C(VM.a[1].lo), C(VM.a[1].hi));
 		printf("  a2: %016llx %016llx a3: %016llx %016llx\n", C(VM.a[2].lo), C(VM.a[2].hi), C(VM.a[3].lo), C(VM.a[3].hi));
 	}
-	
+
 	printf("  fprc: %u\n", VM.fprc);
 
 	blake2b(scratchpad_hash, 32, scratchpad, RANDOMX_SCRATCHPAD_L3);
@@ -171,4 +174,17 @@ void breakpoint(uint32_t ic, int pc, uint32_t mx, uint32_t ma, uint32_t sp_addr0
 #undef C
 }
 
+#else
+
+WASM_EXPORT("b")
+void breakpoint(uint32_t ic, int pc, uint32_t mx, uint32_t ma, uint32_t sp_addr0, uint32_t sp_addr1) {
+	(void)ic;
+	(void)pc;
+	(void)mx;
+	(void)ma;
+	(void)sp_addr0;
+	(void)sp_addr1;
+}
+
+#endif
 #endif
