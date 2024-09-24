@@ -1,5 +1,5 @@
-#include "freestanding.h"
 #include "blake2b.h"
+#include "freestanding.h"
 
 #include <stdint.h>
 
@@ -172,7 +172,7 @@ void blake2b_init_param(blake2b_state *S, blake2b_param *P) {
 
 void blake2b_init_key(blake2b_state *S, int outlen, const uint8_t *key, int keylen) {
 	blake2b_param P[1];
-	
+
 	P->digest_length = (uint8_t)outlen;
 	P->key_length = (uint8_t)keylen;
 	P->fanout = 1;

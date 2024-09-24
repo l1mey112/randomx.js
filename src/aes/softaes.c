@@ -1,9 +1,10 @@
-#include "freestanding.h"
 #include "aes.h"
+#include "freestanding.h"
 
 #include <stdint.h>
 #include <wasm_simd128.h>
 
+// clang-format off
 alignas(16) static const uint32_t lut_enc0[256] = {
 	0xa56363c6, 0x847c7cf8, 0x997777ee, 0x8d7b7bf6, 0x0df2f2ff, 0xbd6b6bd6, 0xb16f6fde, 0x54c5c591,
 	0x50303060, 0x03010102, 0xa96767ce, 0x7d2b2b56, 0x19fefee7, 0x62d7d7b5, 0xe6abab4d, 0x9a7676ec,
@@ -283,6 +284,7 @@ alignas(16) static const uint32_t lut_dec3[256] = {
 	0xca81f3af, 0xb93ec468, 0x382c3424, 0xc25f40a3, 0x1672c31d, 0xbc0c25e2, 0x288b493c, 0xff41950d,
 	0x397101a8, 0x08deb30c, 0xd89ce4b4, 0x6490c156, 0x7b6184cb, 0xd570b632, 0x48745c6c, 0xd04257b8,
 };
+// clang-format on
 
 v128_t soft_aesenc(v128_t in, v128_t key) {
 	uint32_t s0, s1, s2, s3;
@@ -296,8 +298,7 @@ v128_t soft_aesenc(v128_t in, v128_t key) {
 		(lut_enc0[s0 & 0xff] ^ lut_enc1[(s3 >> 8) & 0xff] ^ lut_enc2[(s2 >> 16) & 0xff] ^ lut_enc3[s1 >> 24]),
 		(lut_enc0[s1 & 0xff] ^ lut_enc1[(s0 >> 8) & 0xff] ^ lut_enc2[(s3 >> 16) & 0xff] ^ lut_enc3[s2 >> 24]),
 		(lut_enc0[s2 & 0xff] ^ lut_enc1[(s1 >> 8) & 0xff] ^ lut_enc2[(s0 >> 16) & 0xff] ^ lut_enc3[s3 >> 24]),
-		(lut_enc0[s3 & 0xff] ^ lut_enc1[(s2 >> 8) & 0xff] ^ lut_enc2[(s1 >> 16) & 0xff] ^ lut_enc3[s0 >> 24])
-	);
+		(lut_enc0[s3 & 0xff] ^ lut_enc1[(s2 >> 8) & 0xff] ^ lut_enc2[(s1 >> 16) & 0xff] ^ lut_enc3[s0 >> 24]));
 
 	return wasm_v128_xor(out, key);
 }
@@ -314,8 +315,7 @@ v128_t soft_aesdec(v128_t in, v128_t key) {
 		(lut_dec0[s0 & 0xff] ^ lut_dec1[(s1 >> 8) & 0xff] ^ lut_dec2[(s2 >> 16) & 0xff] ^ lut_dec3[s3 >> 24]),
 		(lut_dec0[s1 & 0xff] ^ lut_dec1[(s2 >> 8) & 0xff] ^ lut_dec2[(s3 >> 16) & 0xff] ^ lut_dec3[s0 >> 24]),
 		(lut_dec0[s2 & 0xff] ^ lut_dec1[(s3 >> 8) & 0xff] ^ lut_dec2[(s0 >> 16) & 0xff] ^ lut_dec3[s1 >> 24]),
-		(lut_dec0[s3 & 0xff] ^ lut_dec1[(s0 >> 8) & 0xff] ^ lut_dec2[(s1 >> 16) & 0xff] ^ lut_dec3[s2 >> 24])
-	);
+		(lut_dec0[s3 & 0xff] ^ lut_dec1[(s0 >> 8) & 0xff] ^ lut_dec2[(s1 >> 16) & 0xff] ^ lut_dec3[s2 >> 24]));
 
 	return wasm_v128_xor(out, key);
 }

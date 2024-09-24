@@ -1,9 +1,9 @@
 #pragma once
 
-#include "vm/vm.h"
 #include "configuration.h"
 #include "freestanding.h"
 #include "inst.h"
+#include "vm/vm.h"
 
 #include <stdbool.h>
 #include <stdint.h>

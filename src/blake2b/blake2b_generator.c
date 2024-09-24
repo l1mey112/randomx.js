@@ -1,5 +1,5 @@
-#include "freestanding.h"
 #include "blake2b.h"
+#include "freestanding.h"
 
 #define MAX_SEED_SIZE 60
 

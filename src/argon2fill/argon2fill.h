@@ -53,4 +53,4 @@ struct argon2_position_t {
 
 void randomx_argon2_initialize(uint8_t *key, uint32_t key_length, argon2_instance_t *instance);
 void randomx_argon2_fill_memory_blocks(const argon2_instance_t *instance);
-void randomx_argon2_fill_segment_v128(const argon2_instance_t* instance, argon2_position_t position);
+void randomx_argon2_fill_segment_v128(const argon2_instance_t *instance, argon2_position_t position);
