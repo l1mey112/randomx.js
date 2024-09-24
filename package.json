@@ -1,6 +1,6 @@
 {
   "name": "randomx.js",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "l-m.dev",
   "main": "./dist/cjs/index.js",
   "devDependencies": {
