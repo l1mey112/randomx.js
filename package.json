@@ -1,6 +1,6 @@
 {
   "name": "randomx.js",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "author": "l-m.dev",
   "main": "./dist/cjs/index.js",
   "devDependencies": {
@@ -16,6 +16,7 @@
     "require": "./dist/cjs/index.js",
     "import": "./dist/esm/index.js"
   },
+  "types": "./dist/index.d.ts",
   "description": "RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.",
   "files": [
     "dist"

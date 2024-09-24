@@ -11,7 +11,7 @@ type DatasetModule = {
 }
 
 // can be shared between threads safely if shared memory is enabled
-export type Cache = {
+export type RxCache = {
 	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
 	thunk: WebAssembly.Module // WASM JIT code
 }
@@ -35,7 +35,7 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 	return [memory, exports]
 }
 
-function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule, is_shared: boolean): Cache {
+function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule, is_shared: boolean): RxCache {
 	const jit_begin = exports.c()
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
@@ -49,9 +49,9 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 	}
 }
 
-type CacheOptions = { shared?: boolean }
+type RxCacheOptions = { shared?: boolean }
 
-export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache {
+export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: RxCacheOptions | undefined | null): RxCache {
 	if (typeof K === 'string') {
 		K = new TextEncoder().encode(K)
 	}
@@ -66,9 +66,9 @@ export function randomx_init_cache(K?: string | Uint8Array | undefined | null, c
 	return initialise(K, memory, exports, is_shared)
 }
 
-export type SuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+export type RxSuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
-export function randomx_superscalarhash(cache: Cache): SuperscalarHash {
+export function randomx_superscalarhash(cache: RxCache): RxSuperscalarHash {
 	const wi = new WebAssembly.Instance(cache.thunk, {
 		e: {
 			m: cache.memory
@@ -76,7 +76,7 @@ export function randomx_superscalarhash(cache: Cache): SuperscalarHash {
 	})
 
 	type SuperscalarHashModule = {
-		d: SuperscalarHash
+		d: RxSuperscalarHash
 	}
 
 	const exports = wi.exports as SuperscalarHashModule

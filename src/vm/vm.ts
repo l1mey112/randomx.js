@@ -1,4 +1,4 @@
-import { randomx_superscalarhash, type Cache } from '../dataset/dataset'
+import { randomx_superscalarhash, type RxCache } from '../dataset/dataset'
 import { jit_detect, jit_feature_stringify, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
 import PRODUCTION from '../production'
@@ -14,7 +14,7 @@ export function randomx_jit_feature() {
 }
 
 // new virtual machine
-export function randomx_create_vm(cache: Cache) {
+export function randomx_create_vm(cache: RxCache) {
 	type VmModule = {
 		memory: WebAssembly.Memory
 
