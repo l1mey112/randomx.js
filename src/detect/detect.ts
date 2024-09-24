@@ -17,16 +17,17 @@ export function jit_detect(): JitFeature {
 	} catch {
 		throw new Error('WebAssembly not available, or SIMD and bulk memory not supported. randomx.js requires these baseline features to run')
 	}
-
+	
 	try {
 		const wm = new WebAssembly.Module(fma)
 		const wi = new WebAssembly.Instance(wm)
 
-		if (!!(wi.exports.d as CallableFunction)()) {
-			return JIT_FMA | JIT_RELAXED_SIMD // working FMA
-		} else {
-			return JIT_RELAXED_SIMD // no working FMA
-		}
+		// TODO: FMA is disabled as it doesn't work in all cases
+		//       fix this later
+		/* if ((wi.exports.d as () => number)()) {
+			//return JIT_FMA | JIT_RELAXED_SIMD // working FMA
+		} */
+		return JIT_RELAXED_SIMD // no working FMA
 	} catch {
 		return JIT_BASELINE // no relaxed SIMD
 	}

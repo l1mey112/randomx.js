@@ -18,6 +18,8 @@ const randomx = randomx_create_vm(cache)
 
 const samples = []
 
+const avg = () => samples.reduce((a, b) => a + b) / samples.length
+
 let i = 0
 while (i < 100) {
 	const time_now = performance.now()
@@ -29,9 +31,10 @@ while (i < 100) {
 	samples.push(time)
 
 	if (i % 4 === 0) {
-		const avg = samples.reduce((a, b) => a + b) / samples.length
-		console.log(`time ${time.toFixed(1)} ms, ${(1000 / avg).toFixed(1)} H/s`)
+		console.log(`time ${time.toFixed(1)} ms, ${(1000 / avg()).toFixed(1)} H/s`)
 	}
 
 	i++
 }
+
+console.log(`average hashrate: ${(1000 / avg()).toFixed(1)} H/s`)
