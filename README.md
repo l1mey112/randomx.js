@@ -1,4 +1,4 @@
-# randomx.js
+# RandomX.js
 
 **RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.** Theorised by its creator and others to be near impossible to run on JS with only web standards, hashes are computed just fine. This is an attempt to build a RandomX implementation that is as fast as possible, compliant with the RandomX specification, simple to read and understand, and matches the (simple) reference API as closely as possible.
 
