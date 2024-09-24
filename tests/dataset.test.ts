@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { buffer, module }  from './harness'
-import { randomx_alloc_cache, randomx_init_cache, randomx_superscalarhash } from '../src/dataset/dataset'
+import { randomx_init_cache, randomx_superscalarhash, type Cache } from '../src/dataset/dataset'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
@@ -29,25 +29,26 @@ test('chained programs', () => {
 })
 
 test('dataset initialisation', () => {
-	const cache = randomx_init_cache(new TextEncoder().encode('test key 000'))
-	const hash = randomx_superscalarhash(cache)
+	function test_with(cache: Cache) {
+		const hash = randomx_superscalarhash(cache)
 
-	const dataset_items_0 = hash(0n)
-	const dataset_items_10000000 = hash(10000000n)
-	const dataset_items_20000000 = hash(20000000n)
-	const dataset_items_30000000 = hash(30000000n)
+		const dataset_items_0 = hash(0n)
+		const dataset_items_10000000 = hash(10000000n)
+		const dataset_items_20000000 = hash(20000000n)
+		const dataset_items_30000000 = hash(30000000n)
 
-	expect(dataset_items_0[0]).toEqual(BigInt.asIntN(64, 0x680588a85ae222dbn))
-	expect(dataset_items_10000000[0]).toEqual(BigInt.asIntN(64, 0x7943a1f6186ffb72n))
-	expect(dataset_items_20000000[0]).toEqual(BigInt.asIntN(64, 0x9035244d718095e1n))
-	expect(dataset_items_30000000[0]).toEqual(BigInt.asIntN(64, 0x145a5091f7853099n))
-})
+		expect(dataset_items_0[0]).toEqual(BigInt.asIntN(64, 0x680588a85ae222dbn))
+		expect(dataset_items_10000000[0]).toEqual(BigInt.asIntN(64, 0x7943a1f6186ffb72n))
+		expect(dataset_items_20000000[0]).toEqual(BigInt.asIntN(64, 0x9035244d718095e1n))
+		expect(dataset_items_30000000[0]).toEqual(BigInt.asIntN(64, 0x145a5091f7853099n))
+	}
+	
+	let n: Cache
 
-test('arraybuffers', () => {
-	let n = randomx_alloc_cache({ shared: true })
+	n = randomx_init_cache('test key 000')
+	expect(n.memory.buffer).toBeInstanceOf(ArrayBuffer)
+	test_with(n)
+	n = randomx_init_cache('test key 000', { shared: true })
 	expect(n.memory.buffer).toBeInstanceOf(SharedArrayBuffer)
-	n = randomx_alloc_cache({ shared: false })
-	expect(n.memory.buffer).not.toBeInstanceOf(SharedArrayBuffer)
-	n = randomx_alloc_cache()
-	expect(n.memory.buffer).not.toBeInstanceOf(SharedArrayBuffer)
+	test_with(n)
 })

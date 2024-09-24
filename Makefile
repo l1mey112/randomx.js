@@ -114,6 +114,9 @@ src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	wasm-objdump -x $@ | sed -n 's/.*memory.*initial=\([0-9]\+\).*/export default \1/p' \
 		> src/dataset/dataset.wasm.pages.ts
 
+	wasm-objdump -x $@ | sed -n 's/.*memory.*initial=\([0-9]\+\).*/#define DATASET_MEMORY_PAGES \1/p' \
+		> src/dataset/dataset.wasm.pages.h
+
 src/vm/vm.wasm: $(VM_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
 		-o $@ $(VM_C_SOURCES)

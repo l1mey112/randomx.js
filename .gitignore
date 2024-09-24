@@ -6,6 +6,7 @@ include/configuration.h
 *.wasmjs.js
 *.asmjs.js
 *.wasm.pages.ts
+*.wasm.pages.h
 src/jit/stubs/*.h
 
 *.c.wasm

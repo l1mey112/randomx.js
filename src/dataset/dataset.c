@@ -24,7 +24,7 @@ void *jit() {
 }
 
 WASM_EXPORT("K")
-uint32_t init_new_key(uint32_t key_length) {
+uint32_t init_new_key(uint32_t key_length, bool is_shared_memory) {
 	init_new_cache(jit_buffer, key_length, cache);
 
 	// sshash_program_t program[RANDOMX_CACHE_ACCESSES];
@@ -36,7 +36,7 @@ uint32_t init_new_key(uint32_t key_length) {
 		ssh_generate(S, &programs[i]);
 	}
 
-	uint32_t wasm_size = jit_ssh(programs, cache, jit_buffer);
+	uint32_t wasm_size = jit_ssh(programs, cache, jit_buffer, is_shared_memory);
 
 	return wasm_size;
 }

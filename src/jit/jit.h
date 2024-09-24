@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf);
+uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf, bool is_shared_memory);
 uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf);
 
 typedef enum jit_feature_t jit_feature_t;

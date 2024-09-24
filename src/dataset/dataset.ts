@@ -7,18 +7,13 @@ import wasm_pages from './dataset.wasm.pages'
 
 type DatasetModule = {
 	c(): number
-	K(key_length: number): number
+	K(key_length: number, is_shared: boolean): number
 }
 
 // can be shared between threads safely if shared memory is enabled
 export type Cache = {
 	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
 	thunk: WebAssembly.Module // WASM JIT code
-}
-
-export type CacheModule = {
-	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
-	exports: DatasetModule
 }
 
 function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] {
@@ -40,12 +35,12 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 	return [memory, exports]
 }
 
-function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): Cache {
+function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule, is_shared: boolean): Cache {
 	const jit_begin = exports.c()
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
 
-	const jit_size = exports.K(K.length) // long blocking
+	const jit_size = exports.K(K.length, is_shared) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
 	return {
@@ -56,18 +51,7 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 
 type CacheOptions = { shared?: boolean }
 
-export function randomx_alloc_cache(conf?: CacheOptions | undefined | null): CacheModule {
-	const [memory, exports] = create_module(!!conf?.shared)
-	return {
-		memory,
-		exports
-	}
-}
-
-export function randomx_init_cache(K: string | Uint8Array | undefined | null, module: CacheModule): Cache
-export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache
-
-export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: CacheOptions | undefined | null | CacheModule): Cache {
+export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: CacheOptions | undefined | null): Cache {
 	if (typeof K === 'string') {
 		K = new TextEncoder().encode(K)
 	}
@@ -77,13 +61,9 @@ export function randomx_init_cache(K?: string | Uint8Array | undefined | null, c
 		throw new Error('Key length is too long (max 60 bytes)')
 	}
 
-	if (conf && 'exports' in conf) {
-		const cache = conf as CacheModule
-		return initialise(K, cache.memory, cache.exports)
-	} else {
-		const [memory, exports] = create_module(!!conf?.shared)
-		return initialise(K, memory, exports)
-	}
+	const is_shared = !!conf?.shared
+	const [memory, exports] = create_module(is_shared)
+	return initialise(K, memory, exports, is_shared)
 }
 
 export type SuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
