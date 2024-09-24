@@ -202,7 +202,7 @@ uint32_t epilogue_store_registers(rx_vm_t *VM, uint8_t *buf) {
 	V128_STORE(144, E(1));
 	V128_STORE(160, E(2));
 	V128_STORE(176, E(3));
-	I32_STORE_GLOBAL(272, $fprc); // VM->fprc = fprc
+	I32_STORE_GLOBAL(288, $fprc); // VM->fprc = fprc
 
 	THUNK_END;
 }
@@ -309,8 +309,8 @@ uint32_t jit_vm_main(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t 
 	// 4. The 256 instructions stored in the Program Buffer are executed.
 	{
 		static jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE];
-		jit_vm_insts_decode(P->program, jump_desc);              // mutate P->program, decode instructions, cover assertions
-		p += jit_vm_insts(P->program, jump_desc, scratchpad, p); // JIT the code
+		jit_vm_insts_decode(P->program, jump_desc);                  // mutate P->program, decode instructions, cover assertions
+		p += jit_vm_insts(VM, P->program, jump_desc, scratchpad, p); // JIT the code
 	}
 
 	// 5. The mx register is XORed with the low 32 bits of registers readReg2 and readReg3 (see Table 4.5.3).
@@ -529,9 +529,10 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			WASM_TYPE_V128,
 
 #if !PRODUCTION
-			// function type 5 : (i32, i32, i32, i32, i32) -> ()
+			// function type 5 : (i32, i32, i32, i32, i32, i32) -> ()
 			0x60,
-			5, // 5 parameters
+			6, // 6 parameters
+			WASM_TYPE_I32,
 			WASM_TYPE_I32,
 			WASM_TYPE_I32,
 			WASM_TYPE_I32,
@@ -567,7 +568,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			// import 2: e.b (breakpoint)
 			1, 'e', 1, 'b', // name = "e.b"
 			0x00,           // func
-			5,              // (ic: i32, mx: i32, ma: i32, sp_addr0: i32, sp_addr1: i32) -> ()
+			5,              // (i32, i32, i32, i32, i32, i32) -> ()
 #endif
 		});
 		// clang-format on

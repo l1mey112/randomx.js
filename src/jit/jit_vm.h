@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/vm.h"
 #include "configuration.h"
 #include "freestanding.h"
 #include "inst.h"
@@ -47,7 +48,10 @@ struct jit_jump_desc_t {
 };
 
 void jit_vm_insts_decode(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE]);
-uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE], uint8_t *scratchpad, uint8_t *buf);
+uint32_t jit_vm_insts(rx_vm_t *VM, rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE], uint8_t *scratchpad, uint8_t *buf);
+
+uint32_t prologue_load_registers(rx_vm_t *VM, uint8_t *buf);
+uint32_t epilogue_store_registers(rx_vm_t *VM, uint8_t *buf);
 
 enum jit_inst_kind_t {
 	IADD_RS,

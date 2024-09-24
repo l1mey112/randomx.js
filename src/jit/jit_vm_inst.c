@@ -69,7 +69,7 @@
 // i64.load align=2
 #define SCRATCHPAD_LOAD_L1_L2(inst) \
 	SCRATCHPAD_PTR_L1_L2(inst);     \
-	WASM_U8_THUNK({0x29, 2, 0});
+	WASM_U8_THUNK({0x29, 2, 0})
 
 // i64.const $imm64
 // i64.add
@@ -82,7 +82,7 @@
 // f64x2.convert_low_i32x4_s
 #define SCRATCHPAD_LOAD_F_L1_L2(inst) \
 	SCRATCHPAD_PTR_L1_L2(inst);       \
-	WASM_U8_THUNK({0xfd, 0x5d, 3, 0, 0xfd, 0xfe, 0x01});
+	WASM_U8_THUNK({0xfd, 0x5d, 3, 0, 0xfd, 0xfe, 0x01})
 
 // i64.const $imm64
 // i64.add
@@ -99,7 +99,7 @@
 // v128.or
 #define SCRATCHPAD_LOAD_E_L1_L2(inst) \
 	SCRATCHPAD_PTR_L1_L2(inst);       \
-	WASM_U8_THUNK({0xfd, 0x5d, 3, 0, 0xfd, 0xfe, 0x01, 0x20, $mask_mant, 0xfd, 0x4e, 0x20, $mask_exp, 0xfd, 0x50});
+	WASM_U8_THUNK({0xfd, 0x5d, 3, 0, 0xfd, 0xfe, 0x01, 0x20, $mask_mant, 0xfd, 0x4e, 0x20, $mask_exp, 0xfd, 0x50})
 
 // i64.const $imm64
 // i32.wrap_i64
@@ -110,10 +110,42 @@
 // i64.load align=2
 #define SCRATCHPAD_DIRECT_LOAD_L3(inst) \
 	SCRATCHPAD_DIRECT_PTR_L3(inst);     \
-	WASM_U8_THUNK({0x29, 2, 0});
+	WASM_U8_THUNK({0x29, 2, 0})
 
-uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE], uint8_t *scratchpad, uint8_t *buf) {
+#if !PRODUCTION
+
+// call out to the function import e.d, for instrumentation
+static uint32_t instrument(rx_vm_t *VM, uint8_t *buf, int pc) {
 	THUNK_BEGIN;
+
+	// (ic: i32, pc: i32, mx: i32, ma: i32, sp_addr0: i32, sp_addr1: i32) -> ()
+
+	p += epilogue_store_registers(VM, p);
+
+	WASM_U8_THUNK({
+		0x20, $ic, // local.get $ic
+		0x41,      // i32.const
+	});
+	WASM_I32(pc); // $pc
+	WASM_U8_THUNK({
+		0x20, $mx,       // local.get $mx
+		0x20, $ma,       // local.get $ma
+		0x20, $sp_addr0, // local.get $sp_addr0
+		0x20, $sp_addr1, // local.get $sp_addr1
+		0x10, 1,         // call 1 (import e.d)
+	});
+
+	THUNK_END;
+}
+
+#endif
+
+uint32_t jit_vm_insts(rx_vm_t *VM, rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE], uint8_t *scratchpad, uint8_t *buf) {
+	THUNK_BEGIN;
+
+#if !PRODUCTION
+	p += instrument(VM, p, -1);
+#endif
 
 	for (int pc = 0; pc < RANDOMX_PROGRAM_SIZE; pc++) {
 		rx_inst_t *inst = &insts[pc];
@@ -183,7 +215,7 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 				WASM_U8_THUNK({
 					0x20, R(inst->dst), // local.get $dest
 					0x20, R(inst->src), // local.get $src
-					0x7e,               // i64.sub
+					0x7d,               // i64.sub
 					0x21, R(inst->dst), // local.set $dest
 				});
 			} else {
@@ -194,7 +226,7 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 				});
 				WASM_I64(IMM_SEXT64(inst->imm32)); // $imm64
 				WASM_U8_THUNK({
-					0x7e,               // i64.sub
+					0x7d,               // i64.sub
 					0x21, R(inst->dst), // local.set $dest
 				});
 			}
@@ -208,7 +240,7 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 				});
 				SCRATCHPAD_LOAD_L1_L2(inst);
 				WASM_U8_THUNK({
-					0x7e,               // i64.sub
+					0x7d,               // i64.sub
 					0x21, R(inst->dst), // local.set $dest
 				});
 			} else {
@@ -218,7 +250,7 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 				});
 				SCRATCHPAD_DIRECT_LOAD_L3(inst);
 				WASM_U8_THUNK({
-					0x7e,               // i64.sub
+					0x7d,               // i64.sub
 					0x21, R(inst->dst), // local.set $dest
 				});
 			}
@@ -342,7 +374,7 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 				0x20, R(inst->dst), // local.get $dest
 				0x42,               // i64.const
 			});
-			WASM_I64(IMM_SEXT64(jit_reciprocal(inst->imm32))); // $reciprocal
+			WASM_I64(jit_reciprocal(inst->imm32)); // $reciprocal
 			WASM_U8_THUNK({
 				0x7e,               // i64.mul
 				0x21, R(inst->dst), // local.set $dest
@@ -546,33 +578,33 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 		case FMUL_R:
 			// dst = dst * src
 			WASM_U8_THUNK({
-				0x20, F(inst->dst), // local.get $dest
+				0x20, E(inst->dst), // local.get $dest
 				0x20, A(inst->src), // local.get $src
 				0x23, $fprc,        // global.get $fprc
 				0x11, 3, 2,         // call_indirect table 2, type (v128, v128) -> v128
-				0x21, F(inst->dst), // local.set $dest
+				0x21, E(inst->dst), // local.set $dest
 			});
 			break;
 		case FDIV_M:
 			// dst = dst * [src + imm64 & mod.mem ? L1 : L2]
 			WASM_U8_THUNK({
-				0x20, F(inst->dst), // local.get $dest
+				0x20, E(inst->dst), // local.get $dest
 				0x20, R(inst->src), // local.get $src
 			});
-			SCRATCHPAD_LOAD_F_L1_L2(inst);
+			SCRATCHPAD_LOAD_E_L1_L2(inst);
 			WASM_U8_THUNK({
 				0x23, $fprc,        // global.get $fprc
 				0x11, 3, 3,         // call_indirect table 3, type (v128, v128) -> v128
-				0x21, F(inst->dst), // local.set $dest
+				0x21, E(inst->dst), // local.set $dest
 			});
 			break;
 		case FSQRT_R:
 			// dst = sqrt(dst)
 			WASM_U8_THUNK({
-				0x20, F(inst->dst), // local.get $dest
+				0x20, E(inst->dst), // local.get $dest
 				0x23, $fprc,        // global.get $fprc
 				0x11, 4, 4,         // call_indirect table 4, type (v128) -> v128
-				0x21, F(inst->dst), // local.set $dest
+				0x21, E(inst->dst), // local.set $dest
 			});
 			break;
 		case CBRANCH: {
@@ -605,7 +637,7 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 				0x20, R(inst->src), // local.get $src
 				0x42,               // i64.const
 			});
-			WASM_I64(IMM_SEXT64(inst->imm32)); // $imm64
+			WASM_I64(inst->imm32 & 63); // $imm
 			WASM_U8_THUNK({
 				0x8a,        // i64.rotr
 				0xa7,        // i32.wrap_i64
@@ -643,6 +675,10 @@ uint32_t jit_vm_insts(rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jum
 		default:
 			unreachable();
 		}
+
+#if !PRODUCTION
+		p += instrument(VM, p, pc);
+#endif
 	}
 
 	THUNK_END;

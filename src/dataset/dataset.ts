@@ -6,7 +6,7 @@ import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
 
 type DatasetModule = {
-	b(): number
+	c(): number
 	K(key_length: number): number
 }
 
@@ -41,7 +41,7 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 }
 
 function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): Cache {
-	const jit_begin = exports.b()
+	const jit_begin = exports.c()
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
 

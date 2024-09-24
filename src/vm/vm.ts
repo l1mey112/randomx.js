@@ -24,6 +24,8 @@ export function randomx_create_vm(cache: Cache) {
 		R(): void
 		Ri(): number
 		Rf(): number
+		// when !PRODUCTION
+		b(ic: number, pc: number, mx: number, ma: number, sp_addr0: number, sp_addr1: number): void
 	}
 
 	if (!_wasm) {
@@ -52,10 +54,9 @@ export function randomx_create_vm(cache: Cache) {
 		}
 	}
 
+	// inspect the VM JIT code
 	if (!PRODUCTION) {
-		jit_imports.e.b = function () {
-			console.log('VM: breakpoint', arguments)
-		}
+		jit_imports.e.b = exports.b
 	}
 
 	function hash(H: Uint8Array | string): Uint8Array {

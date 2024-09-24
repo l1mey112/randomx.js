@@ -18,7 +18,7 @@ static uint8_t jit_buffer[48 * 1024];
 static uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
 static ss_program_t programs[RANDOMX_CACHE_ACCESSES];
 
-WASM_EXPORT("b")
+WASM_EXPORT("c")
 void *jit() {
 	return jit_buffer;
 }
