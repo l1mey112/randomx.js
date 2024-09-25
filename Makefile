@@ -1,6 +1,6 @@
 H_SOURCES := $(shell find . -type f -name '*.h' -not -path './node_modules/*')
 
-WAT_SOURCES := $(shell find . -type f -name '*.wat' -not -path './node_modules/*')
+WAT_SOURCES := $(shell find src -type f -name '*.wat' -not -path './node_modules/*')
 WAT_WASM_FILES := $(patsubst %.wat,%.wasm,$(WAT_SOURCES))
 
 JIT_STUBS_C_SOURCES := $(shell find src/jit/stubs -type f -name '*.c')

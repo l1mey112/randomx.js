@@ -801,7 +801,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			// vec(function_idx, vec(idx, name))
 			WASM_U8(1); // entries = vec(1)
 
-			WASM_U8(1);  // function index 1
+			WASM_U8(FIDX(0));  // function index 1
 			WASM_U8(29); // locals = vec(29)
 
 			LOCAL_NAME(R(0), "r0");
