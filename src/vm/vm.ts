@@ -3,10 +3,6 @@ import { jit_detect, jit_feature_stringify, type JitFeature } from '../detect/de
 import { env_npf_putc } from '../printf/printf'
 import PRODUCTION from '../production'
 
-// @ts-ignore
-import wasm from './vm.wasm'
-
-let _wasm: WebAssembly.Module | null = null
 const _feature: JitFeature = jit_detect()
 
 export function randomx_jit_feature() {
