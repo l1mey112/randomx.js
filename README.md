@@ -33,10 +33,13 @@ node examples/randomx_threaded.js
 
 node examples/mining/server.js
 # server running at http://localhost:8080/
+# JIT using: baseline + relaxed-simd
+# average hashrate: 137.0 H/s
 
-node -v; bun -v
+node -v; bun -v; chromium --version
 # v22.9.0
 # 1.1.29
+# Chromium 128.0.6613.119 Arch Linux
 ```
 
 Hashrate was speculated to be 1 H/s per thread, this beats it at still a pitiful 20 H/s. On the same machine, 100 H/s per thread is achieved when mining in light/verification mode, so 5x slower ain't that bad. Mining with an initialised dataset (2 GiB allocation) is not supported (though easy to implement), no one on earth would give a webpage multiple gigabytes of memory. **Light/verification mode only, transparent threading is enabled by allocating the cache with the `shared` parameter.**
