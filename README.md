@@ -24,12 +24,12 @@ node examples/randomx.js
 bun examples/randomx.js
 # JIT using: baseline
 # cache construction time 1071.8 ms
-# average hashrate: 12.5 H/s
+# average hashrate: 14.1 H/s
 
 node examples/randomx_threaded.js
 # JIT using: baseline + relaxed-simd
 # initialising thread 0..15
-# average hashrate: 206.0 H/s
+# average hashrate: 208.0 H/s
 
 node examples/mining/server.js
 # server running at http://localhost:8080/

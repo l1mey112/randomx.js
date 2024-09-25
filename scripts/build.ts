@@ -41,6 +41,9 @@ const opt: BuildOptions = {
 		'.wasm': 'binary',
 	},
 	plugins: [production_intercept_plugin],
+	define: {
+		'PRODUCTION': JSON.stringify(PRODUCTION),
+	},
 }
 
 await Promise.all([

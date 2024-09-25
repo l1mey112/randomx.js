@@ -1,5 +1,5 @@
-let p = 0
-const buf = new Uint32Array(1024)
+let p = /* @__PURE__ */ 0
+const buf = /* @__PURE__ */ new Uint32Array(128)
 
 // env.ch
 export function env_npf_putc(ch: number) {

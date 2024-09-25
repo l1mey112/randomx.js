@@ -1,9 +1,15 @@
 import { env_npf_putc } from '../printf/printf'
 import { adjust_imported_shared_memory } from '../wasm_prefix'
+import PRODUCTION from '../production'
 
 // @ts-ignore
 import wasm from './dataset.wasm'
 import wasm_pages from './dataset.wasm.pages'
+
+// @ts-ignore
+import vm_wasm from '../vm/vm.wasm'
+
+let _vm_handle: WebAssembly.Module | null = null
 
 type DatasetModule = {
 	c(): number
@@ -14,6 +20,7 @@ type DatasetModule = {
 export type RxCache = {
 	memory: WebAssembly.Memory // backing ArrayBuffer or SharedArrayBuffer
 	thunk: WebAssembly.Module // WASM JIT code
+	vm: WebAssembly.Module // handle to memoised randomx VM, to avoid recomplilation when sent over threads
 }
 
 function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] {
@@ -43,9 +50,14 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 	const jit_size = exports.K(K.length, is_shared) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
+	if (!_vm_handle) {
+		_vm_handle = new WebAssembly.Module(vm_wasm)
+	}
+
 	return {
 		memory,
-		thunk: new WebAssembly.Module(jit_buffer)
+		thunk: new WebAssembly.Module(jit_buffer),
+		vm: _vm_handle,
 	}
 }
 

@@ -28,19 +28,14 @@ export function randomx_create_vm(cache: RxCache) {
 		b(ic: number, pc: number, mx: number, ma: number, sp_addr0: number, sp_addr1: number): void
 	}
 
-	if (!_wasm) {
-		_wasm = new WebAssembly.Module(wasm)
-	}
+	const SCRATCH_SIZE = 16 * 1024
 
 	const wi_imports = PRODUCTION ? {} : {
 		e: {
 			ch: env_npf_putc
 		}
 	}
-	const wi = new WebAssembly.Instance(_wasm, wi_imports as Record<string, any>)
-
-	const SCRATCH_SIZE = 16 * 1024
-
+	const wi = new WebAssembly.Instance(cache.vm, wi_imports as Record<string, any>)
 	const exports = wi.exports as VmModule
 	const scratch_ptr = exports.i(_feature)
 	const memory = exports.memory
