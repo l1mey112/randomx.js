@@ -1,6 +1,6 @@
 # RandomX.js
 
-**RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.** Theorised by its creator and others to be near impossible to run on JS with only web standards, hashes are computed just fine. This is an attempt to build a RandomX implementation that is as fast as possible, compliant with the RandomX specification, simple to read and understand, and matches the (simple) reference API as closely as possible.
+**RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.** Theorised by its creator and others to be near impossible to run on JS with only web standards, hashes are computed just fine. This is an attempt to build a RandomX implementation that is as fast as possible, compliant with the RandomX specification, simple to read and understand, and matches the reference API as closely as possible.
 
 ```ts
 // npm i randomx.js
@@ -18,8 +18,8 @@ console.log(randomx.calculate_hash('hello world')) // Uint8Array
 PRODUCTION=1 scripts/build.ts
 node examples/randomx.js
 # JIT using: baseline + relaxed-simd
-# cache construction time 579.7 ms
-# average hashrate: 19.7 H/s
+# cache construction time 535.8 ms
+# average hashrate: 22.0 H/s
 
 bun examples/randomx.js
 # JIT using: baseline
@@ -28,7 +28,11 @@ bun examples/randomx.js
 
 node examples/randomx_threaded.js
 # JIT using: baseline + relaxed-simd
-# average hashrate: 160.9 H/s
+# initialising thread 0..15
+# average hashrate: 206.0 H/s
+
+node examples/mining/server.js
+# server running at http://localhost:8080/
 
 node -v; bun -v
 # v22.9.0
@@ -47,7 +51,7 @@ Virtual machine executions use a JIT compiler ([superscalarhash](src/jit/jit_ssh
 
 Vector instructions are used where possible in the library ([argon2](src/argon2fill/argon2fill_v128.c), [semifloat](src/jit/stubs/semifloat.c)) and in JIT code, and AES-NI rounds are emulated in software ([softaes](src/aes/softaes.c)).
 
-RandomX requires the use of multiple floating point rounding modes adjustable during VM execution, which are not supported in JavaScript. Performant emulations ([semifloat](src/jit/stubs/semifloat.c)) are used in place of these, which I am not opting to call "softfloat". A better name for these would be "semifloat", as they implement the rounding modes in terms of floating point operations rounded to nearest, ties to even. This libraries semifloat implementation is rigorously tested, with a 200k LOC test suite ([harness](tests/semifloat/semifloat_test.c)).
+RandomX requires the use of multiple floating point rounding modes adjustable during VM execution, which are not supported in JavaScript. Performant emulations ([semifloat](src/jit/stubs/semifloat.c)) are used in place of these, which I am not opting to call "softfloat". A better name for these would be "semifloat", as they implement the rounding modes in terms of floating point operations rounded to nearest, not a typical softfloat that implements floating point using only integer operations. This libraries semifloat implementation is rigorously tested, with a 200k LOC test suite ([harness](tests/semifloat/semifloat_test.c)).
 
 The library is entirely compliant with reference implementation, and all components been tested properly ([tests](tests), [harness](tests/harness.c), [harness wrapper](tests/harness.ts)). Reaching compliance was done by single stepping the virtual machine and diffing the state with the reference implementation ([breakpoint function](src/vm/vm.c), [JIT instrumentation](src/jit/jit_vm_inst.c)).
 

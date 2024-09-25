@@ -1,3 +1,5 @@
+import PRODUCTION from './production'
+
 export function locate_import(binary: Uint8Array, needle: string): number {
 	// the import section is near the start, no need to step over the entire binary
 	// indexOf doesn't work on Uint8Array
@@ -19,7 +21,7 @@ export function locate_import(binary: Uint8Array, needle: string): number {
 		}
 	}
 
-	if (!found) {
+	if (!PRODUCTION && !found) {
 		throw new Error('Import not found')
 	}
 
@@ -74,12 +76,12 @@ export function adjust_imported_shared_memory(binary: Uint8Array, needle: string
 	//           | 0x01 n:u32 m:u32   => { min n, max m }
 	//           | 0x03 n:u32 m:u32   => { min n, max m, shared }
 
-	if (binary[p] !== 0x02) {
+	if (!PRODUCTION && binary[p] !== 0x02) {
 		throw new Error('Expected memtype')
 	}
 	p += 1 // 0x02
 
-	if (binary[p] === 0x00) {
+	if (!PRODUCTION && binary[p] === 0x00) {
 		throw new Error('Cannot patch in place')
 	}
 

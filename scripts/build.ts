@@ -47,24 +47,23 @@ await Promise.all([
 	esbuild.build({
 		...opt,
 		outdir: 'dist/web',
-		target: ['chrome58', 'firefox57', 'safari11'],
-		format: 'iife',
+		target: ['chrome91', 'firefox89', 'safari16'],
 		platform: 'browser',
-		globalName: 'randomx',
+		format: 'esm',
 	}),
 
 	esbuild.build({
 		...opt,
 		outdir: 'dist/cjs',
-		target: ['node19'],
-		platform: 'neutral',
+		target: ['node17'],
+		platform: 'node',
 		format: 'cjs',
 	}),
 
 	esbuild.build({
 		...opt,
 		outdir: 'dist/esm',
-		target: ['node19'],
+		target: ['node17'],
 		platform: 'node',
 		format: 'esm',
 	}),

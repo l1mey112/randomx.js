@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body>
+	<script type="module">
+		import { randomx_init_cache, randomx_create_vm } from 'https://cdn.jsdelivr.net/npm/randomx.js/dist/web/index.js'
+		const cache = randomx_init_cache('test key 000', { shared: true})
+
+		const threads = navigator.hardwareConcurrency || 1
+
+		let hashes = 0
+		function onmessage(e) {
+			const hash = e.data
+			if (hash !== '300a0adb47603dedb42228ccb2b211104f4da45af709cd7547cd049e9489c969') {
+				console.error('hash mismatch', hash)
+			}
+
+			hashes++
+		}
+
+		for (let i = 0; i < threads; i++) {
+			console.log(`initialising thread ${i}`)
+			const worker = new Worker('worker.js', {
+				type: 'module'
+			})
+
+			worker.postMessage(cache)
+			worker.onmessage = onmessage
+		}
+
+		let start_time = performance.now()
+
+		setInterval(() => {
+			const time = performance.now()
+			const elapsed = (time - start_time) / 1000
+			const hashrate = hashes / elapsed
+			console.log(`average hashrate: ${hashrate.toFixed(1)} H/s`)
+			hashes = 0
+			start_time = time
+		}, 1000)
+	</script>
+</body>
+</html>
