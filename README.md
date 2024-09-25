@@ -46,6 +46,13 @@ node -v; bun -v; chromium --version
 
 Hashrate was speculated to be 1 H/s per thread, this beats it at still a pitiful 20 H/s. On the same machine, 100 H/s per thread is achieved when mining in light/verification mode, so 5x slower ain't that bad. Mining with an initialised dataset (2 GiB allocation) is not supported (though easy to implement), no one on earth would give a webpage multiple gigabytes of memory. **Light/verification mode only, transparent threading is enabled by allocating the cache with the `shared` parameter.**
 
+Appreciate the undertaking? Consider a donation.
+
+| Crypto  | Donation Address |
+| ------------- | ------------- |
+| XMR  | 85vt1KvVz82Dd7AoVWXxnPCubutVT9NRNTAoxKFnXNpzcUfLFZ7rBtjbxonPTD5roE998XczLAoCrUD7tPS84AUQ8cZXHRM |
+| WOW  | WW3asfacxETEgtUFVXGBfnJUqmMgNrVdWJTDouT63Ly4B1B9xiqj2g6bDPS8jZNn6pXY5pj4dnmTtL1gLRTAxXwz1LQhsua1R |
+
 ## Implmentation
 
 This codebase can be used to learn about RandomX, and its individual stages implemented with simple code. The library contains zero JavaScript dependencies, with pure freestanding C code that doesn't depend on a standard library. **All C++ code has been reimplemented or removed. C++ is a cancer that made the original library impossible to understand in one piece.**
