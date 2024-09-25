@@ -190,7 +190,7 @@ void blake2b_init_key(blake2b_state *S, int outlen, const uint8_t *key, int keyl
 	}
 }
 
-void blake2b_finalise(blake2b_state *S, uint8_t buffer[BLAKE2B_OUTBYTES]) {
+static void blake2b_final(blake2b_state *S) {
 	if (blake2b_is_lastblock(S)) {
 		return;
 	}
@@ -201,8 +201,24 @@ void blake2b_finalise(blake2b_state *S, uint8_t buffer[BLAKE2B_OUTBYTES]) {
 		(S->buf + S->buflen)[i] = 0;
 	}
 	blake2b_compress(S, S->buf);
+}
 
-	memcpy(buffer, S->h, BLAKE2B_OUTBYTES);
+void blake2b_finalise(blake2b_state *S, uint8_t *buffer) {
+	blake2b_final(S);
+	memcpy(buffer, S->h, S->outlen);
+}
+
+void blake2b_finalise_hex(blake2b_state *S, uint8_t *buffer) {
+	blake2b_final(S);
+
+	static const uint8_t lut[] = "0123456789abcdef";
+
+	uint8_t *h = (uint8_t *)S->h;
+
+	for (int i = 0; i < S->outlen; i++) {
+		buffer[i * 2] = lut[(h[i] >> 4) & 0xf];
+		buffer[i * 2 + 1] = lut[h[i] & 0xf];
+	}
 }
 
 void blake2b(uint8_t *out, uint32_t outlen, const void *in, uint32_t inlen) {
@@ -211,6 +227,14 @@ void blake2b(uint8_t *out, uint32_t outlen, const void *in, uint32_t inlen) {
 	blake2b_init_key(&blake_state, outlen, NULL, 0);
 	blake2b_update(&blake_state, in, inlen);
 	blake2b_finalise(&blake_state, out);
+}
+
+void blake2b_hex(uint8_t *out, uint32_t outlen, const void *in, uint32_t inlen) {
+	blake2b_state blake_state;
+
+	blake2b_init_key(&blake_state, outlen, NULL, 0);
+	blake2b_update(&blake_state, in, inlen);
+	blake2b_finalise_hex(&blake_state, out);
 }
 
 void blake2b_1024(uint8_t *out, const void *in, uint32_t inlen) {

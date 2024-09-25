@@ -19,7 +19,7 @@ export function randomx_create_vm(cache: RxCache) {
 		memory: WebAssembly.Memory
 
 		i(feature: JitFeature): number // returns scratch buffer
-		I(): void
+		I(is_hex: boolean): void
 		H(data_length: number): number
 		R(): void
 		Ri(): number
@@ -54,13 +54,13 @@ export function randomx_create_vm(cache: RxCache) {
 		jit_imports.e.b = exports.b
 	}
 
-	function hash(H: Uint8Array | string): Uint8Array {
+	function hash(H: Uint8Array | string, is_hex: boolean) {
 		if (typeof H === 'string') {
 			H = new TextEncoder().encode(H)
 		}
 
 		// install seed S from H
-		exports.I()
+		exports.I(is_hex)
 		let p = 0
 		while (p < H.length) {
 			const chunk = H.subarray(p, p + SCRATCH_SIZE)
@@ -78,21 +78,16 @@ export function randomx_create_vm(cache: RxCache) {
 			const jit_exports = jit_wi.exports as { d: () => void }
 			jit_exports.d()
 		} while (exports.Rf())
-
-		return new Uint8Array(scratch.subarray(0, 32)) // Hash256
 	}
 
 	return {
-		calculate_hash(H: Uint8Array | string) {
-			return hash(H)
+		calculate_hash(H: Uint8Array | string): Uint8Array {
+			hash(H, false)
+			return new Uint8Array(scratch.subarray(0, 32)) // Hash256
 		},
-		calculate_hex_hash(H: Uint8Array | string) {
-			const R = hash(H)
-			let hex = ''
-			for (let i = 0; i < R.length; i++) {
-				hex += R[i].toString(16).padStart(2, '0')
-			}
-			return hex
+		calculate_hex_hash(H: Uint8Array | string): string {
+			hash(H, true)
+			return new TextDecoder().decode(scratch.subarray(0, 64)) // Hash256
 		},
 	}
 }

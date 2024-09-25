@@ -18,6 +18,7 @@ static uint8_t jit_buffer[16 * 1024];
 
 static blake2b_state *SS; // seed state
 static uint8_t program_count;
+static bool is_hex;
 
 WASM_EXPORT("i")
 void *init(uint8_t f) {
@@ -26,7 +27,8 @@ void *init(uint8_t f) {
 }
 
 WASM_EXPORT("I")
-void init_new_hash() {
+void init_new_hash(bool h) {
+	is_hex = h;
 	blake2b_init_key(SS, 64, NULL, 0);
 }
 
@@ -99,7 +101,12 @@ bool finalise_vm() {
 void final_vm_iteration() {
 	// A = AesHash1R(Scratchpad), overwrite the 64 bytes of RegisterFile
 	hashAes1Rx4(scratchpad, RANDOMX_SCRATCHPAD_L3, (void *)&VM.a);
-	blake2b(jit_buffer, 32, &VM, 256); // R = Hash256(RegisterFile)
+
+	if (is_hex) {
+		blake2b_hex(jit_buffer, 32, &VM, 256); // R = Hash256(RegisterFile)
+	} else {
+		blake2b(jit_buffer, 32, &VM, 256); // R = Hash256(RegisterFile)
+	}
 }
 
 #if !PRODUCTION
