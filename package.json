@@ -34,7 +34,7 @@
   "keywords": ["monero", "randomx", "pow", "hash", "wasm", "webassembly", "cryptocurrency", "crypto", "mining"],
   "license": "BSD-3-Clause",
   "scripts": {
-    "build": "PRODUCTION=1 bun scripts/build.ts",
+    "build": "bun scripts/build.ts",
     "test": "bun test"
   }
 }

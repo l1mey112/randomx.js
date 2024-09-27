@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if !PRODUCTION
+#if INSTRUMENT
 #define FIDX(x) (x + 2) // e.d (superscalarhash), e.b (breakpoint)
 #else
 #define FIDX(x) (x + 1) // e.d (superscalarhash)

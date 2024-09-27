@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#if !PRODUCTION
+#if INSTRUMENT
 // we will be inserting breakpoints in the JITted code
 static uint8_t jit_buffer[128 * 1024];
 #else
@@ -109,7 +109,7 @@ void final_vm_iteration() {
 	}
 }
 
-#if !PRODUCTION
+#if INSTRUMENT
 #if 0 // 1 to enable
 
 const char *inst_tos[] = {

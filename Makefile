@@ -22,39 +22,19 @@ DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAK
 VM_C_SOURCES := $(sort $(shell find src/vm -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES))
 TESTS_C_SOURCES := $(sort $(shell find tests -maxdepth 1 -type f -name '*.c') $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_C_SOURCES) $(VM_C_SOURCES))
 
-wasm-opt := wasm-opt
-DFLAGS :=
-
-# Debian is a great simple daily driver. However, its fucking terrible for development.
-# Debian 12 doesn't ship a proper version of Clang or Binaryen.
-
-# To install Clang 20:
-# $ apt install clang-20 clang-tools-20 clang-20-doc libclang-common-20-dev libclang-20-dev libclang1-20 clang-format-20 python3-clang-20 clangd-20 clang-tidy-20 lld-20
-
-# To install a better version of Binaryen:
-# $ # not possible, which is why I have a gate below:
-DEBIAN_LSB := $(shell which lsb_release 2>/dev/null)
-ifneq ($(DEBIAN_LSB),)
-	DEBIAN_RELEASE := $(shell lsb_release -sr 2> /dev/null)
-	ifeq ($(shell expr $(DEBIAN_RELEASE) \<= 12),1)
-		wasm-opt := echo
-		DFLAGS += --no-wasm-opt
-	endif
+ifeq ($(INSTRUMENT),)
+	INSTRUMENT := 0
 endif
 
-ifeq ($(PRODUCTION),)
-	PRODUCTION := 0
-endif
+# INSTRUMENT flag
+$(info INSTRUMENT=$(INSTRUMENT))
 
-# PRODUCTION flag
-$(info PRODUCTION=$(PRODUCTION))
-
-UFLAGS = -Iinclude -Isrc -DPRODUCTION=$(PRODUCTION)
+UFLAGS = -Iinclude -Isrc -DINSTRUMENT=$(INSTRUMENT)
 
 # https://lld.llvm.org/WebAssembly.html
 LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(UFLAGS) \
-	-msimd128 -mbulk-memory $(DFLAGS)
+	-msimd128 -mbulk-memory
 
 # -matomics -Wl,--shared-memory to use shared memory
 
@@ -87,7 +67,7 @@ tests/semifloat/semifloat: tests/semifloat/semifloat_test.c tests/semifloat/semi
 
 src/jit/stubs/%.wasm: src/jit/stubs/%.c
 	clang -O3 $(CFLAGS) -mrelaxed-simd $(LDFLAGS) -o $@ $<
-	$(wasm-opt) -all -O4 $@ -o $@
+	wasm-opt -all -O4 $@ -o $@
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
 	./scripts/stubgen.ts $< > $@
 
@@ -96,7 +76,7 @@ tests/harness.wasm: $(TESTS_C_SOURCES) $(H_SOURCES)
 		-o $@ $(TESTS_C_SOURCES)
 
 	wasm-strip $@
-	$(wasm-opt) -all -O4 -Oz $@ -o $@
+	wasm-opt -all -O4 -Oz $@ -o $@
 
 src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
@@ -106,7 +86,7 @@ src/dataset/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
 
 	wasm-strip $@
-	$(wasm-opt) -all -O4 -Oz $@ -o $@
+	wasm-opt -all -O4 -Oz $@ -o $@
 
 # extract the memory
 #  - memory[0] pages: initial=4097 <- env.memory
@@ -122,4 +102,4 @@ src/vm/vm.wasm: $(VM_C_SOURCES) $(H_SOURCES)
 		-o $@ $(VM_C_SOURCES)
 
 	wasm-strip $@
-	$(wasm-opt) -all -O4 -Oz $@ -o $@
+	wasm-opt -all -O4 -Oz $@ -o $@

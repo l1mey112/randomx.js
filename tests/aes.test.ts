@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { fillAes1Rx4, module, soft_aesdec, soft_aesenc }  from './harness'
+import { fillAes1Rx4, soft_aesdec, soft_aesenc }  from './harness'
 
 test('fillAes1Rx4', () => {
 	const state = new Uint8Array([108, 25, 83, 110, -78, -34, 49, -74, -64, 6, 95, 127, 17, 110, -122, -7, 96, -40, -81, 12, 87, 33, 10, 101, -124, -61, 35, 123, -99, 6, 77, -57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])

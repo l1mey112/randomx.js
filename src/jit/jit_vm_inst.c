@@ -112,7 +112,7 @@
 	SCRATCHPAD_DIRECT_PTR_L3(inst);     \
 	WASM_U8_THUNK({0x29, 2, 0})
 
-#if !PRODUCTION && 0 // 1 to enable
+#if INSTRUMENT && 0 // 1 to enable
 
 // call out to the function import e.d, for instrumentation
 static uint32_t instrument(rx_vm_t *VM, uint8_t *buf, int pc) {
@@ -143,7 +143,7 @@ static uint32_t instrument(rx_vm_t *VM, uint8_t *buf, int pc) {
 uint32_t jit_vm_insts(rx_vm_t *VM, rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_jump_desc_t jump_desc[RANDOMX_PROGRAM_SIZE], uint8_t *scratchpad, uint8_t *buf) {
 	THUNK_BEGIN;
 
-#if !PRODUCTION && 0 // 1 to enable
+#if INSTRUMENT && 0 // 1 to enable
 	p += instrument(VM, p, -1);
 #endif
 
@@ -676,7 +676,7 @@ uint32_t jit_vm_insts(rx_vm_t *VM, rx_inst_t insts[RANDOMX_PROGRAM_SIZE], jit_ju
 			unreachable();
 		}
 
-#if !PRODUCTION && 0 // 1 to enable
+#if INSTRUMENT && 0 // 1 to enable
 		p += instrument(VM, p, pc);
 #endif
 	}

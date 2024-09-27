@@ -48,7 +48,7 @@
 
 #define STRLEN_CONST(v) (sizeof(v "") - 1)
 
-#if !PRODUCTION
+#if INSTRUMENT
 int printf(const char *restrict format, ...) __attribute__((format(printf, 1, 2)));
 int snprintf(char *restrict str, unsigned long size, const char *restrict format, ...) __attribute__((format(printf, 3, 4)));
 #else

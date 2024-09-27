@@ -1,6 +1,5 @@
 import { env_npf_putc } from '../printf/printf'
 import { adjust_imported_shared_memory } from '../wasm_prefix'
-import PRODUCTION from '../production'
 
 // @ts-ignore
 import wasm from './dataset.wasm'
@@ -8,6 +7,8 @@ import wasm_pages from './dataset.wasm.pages'
 
 // @ts-ignore
 import vm_wasm from '../vm/vm.wasm'
+
+declare var INSTRUMENT: number
 
 let _vm_handle: WebAssembly.Module | null = null
 
@@ -29,14 +30,20 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
 	const wm = new WebAssembly.Module(wasm)
-	const wi = new WebAssembly.Instance(wm, {
-		e: {
-			ch: env_npf_putc
-		},
+
+	const wi_imports = !INSTRUMENT ? {
+		env: {
+			memory
+		}
+	} : {
 		env: {
 			memory
 		},
-	})
+		e: {
+			ch: env_npf_putc
+		}
+	}
+	const wi = new WebAssembly.Instance(wm, wi_imports as Record<string, any>)
 
 	const exports = wi.exports as DatasetModule
 	return [memory, exports]

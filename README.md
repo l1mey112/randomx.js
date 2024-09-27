@@ -17,25 +17,25 @@ console.log(randomx.calculate_hash('hello world')) // Uint8Array
 > [RandomX](https://github.com/tevador/RandomX) is a proof-of-work (PoW) algorithm that is optimized for general-purpose CPUs. RandomX uses random code execution (hence the name) together with several memory-hard techniques to minimize the efficiency advantage of specialized hardware.
 
 ```bash
-PRODUCTION=1 scripts/build.ts
+scripts/build.ts
 node examples/randomx.js
-# JIT using: baseline + relaxed-simd
+# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+!fma] Node.js/v22.9.0 (linux x64)
 # cache construction time 535.8 ms
 # average hashrate: 22.0 H/s
 
 bun examples/randomx.js
-# JIT using: baseline
+# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0] Bun/1.1.29 (linux x64)
 # cache construction time 1071.8 ms
 # average hashrate: 14.1 H/s
 
 node examples/randomx_threaded.js
-# JIT using: baseline + relaxed-simd
+# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+!fma] Node.js/v22.9.0 (linux x64)
 # initialising thread 0..15
 # average hashrate: 208.0 H/s
 
 node examples/mining/server.js
 # server running at http://localhost:8080/
-# JIT using: baseline + relaxed-simd
+# machine id: Generic 16-Thread CPU [rx/0] Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0
 # average hashrate: 137.0 H/s
 
 node -v; bun -v; chromium --version

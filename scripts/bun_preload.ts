@@ -16,4 +16,9 @@ export const binayloader: BunPlugin = {
 	},
 }
 
+// build tools
+global.INSTRUMENT = 1
+global.FORMAT = "esm"
+global.ENVIRONMENT = "node"
+
 await plugin(binayloader)

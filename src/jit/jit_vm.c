@@ -480,7 +480,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	WASM_SECTION(WASM_SECTION_TYPE, {
 		// clang-format off
 		WASM_U8_THUNK({
-#if !PRODUCTION
+#if INSTRUMENT
 			6, // function types = vec(6)
 #else
 			5, // function types = vec(5)
@@ -528,7 +528,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			1, // 1 return value
 			WASM_TYPE_V128,
 
-#if !PRODUCTION
+#if INSTRUMENT
 			// function type 5 : (i32, i32, i32, i32, i32, i32) -> ()
 			0x60,
 			6, // 6 parameters
@@ -548,7 +548,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	WASM_SECTION(WASM_SECTION_IMPORT, {
 		// clang-format off
 		WASM_U8_THUNK({
-#if !PRODUCTION
+#if INSTRUMENT
 			3, // imports = vec(3)
 #else
 			2, // imports = vec(2)
@@ -564,7 +564,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 			0x00,           // func
 			1,              // (i64) -> (i64, i64, i64, i64, i64, i64, i64, i64)
 
-#if !PRODUCTION
+#if INSTRUMENT
 			// import 2: e.b (breakpoint)
 			1, 'e', 1, 'b', // name = "e.b"
 			0x00,           // func
@@ -575,7 +575,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	});
 
 	// import 0: e.d - function idx 0
-	// import 1: e.b - function idx 1 (if !PRODUCTION)
+	// import 1: e.b - function idx 1 (if INSTRUMENT)
 	// (all other function idxs are shifted by 1 or 2, the amount of imports)
 	// - use FIDX() macro for that
 
@@ -735,7 +735,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 		WASM_U32_WITH_STUB(STUB_FMUL_0);
 
-		if (jit_feature & JIT_FMA) {
+		if (0 /* jit_feature & JIT_FMA */) {
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_3);
@@ -747,7 +747,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 		WASM_U32_WITH_STUB(STUB_FDIV_0);
 
-		if (jit_feature & JIT_FMA) {
+		if (0 /* jit_feature & JIT_FMA */) {
 			WASM_U32_WITH_STUB(STUB_FDIV_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FDIV_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FDIV_FMA_3);
@@ -759,7 +759,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 		WASM_U32_WITH_STUB(STUB_FSQRT_0);
 
-		if (jit_feature & JIT_FMA) {
+		if (0 /* jit_feature & JIT_FMA */) {
 			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_3);
@@ -771,7 +771,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 	});
 
 	// assign local names for debug purposes
-#if !PRODUCTION
+#if INSTRUMENT
 
 #define LOCAL_NAME(idx, name) \
 	WASM_U8(idx);             \

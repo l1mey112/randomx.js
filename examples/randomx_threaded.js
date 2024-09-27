@@ -1,11 +1,11 @@
 const { Worker, isMainThread, parentPort } = require('worker_threads')
-const { randomx_create_vm, randomx_init_cache, randomx_jit_feature } = require('../dist/cjs/index')
+const { randomx_create_vm, randomx_init_cache, randomx_machine_id } = require('../dist/cjs/index')
 const { availableParallelism } = require('os')
 
 const threads = availableParallelism()
 
 if (isMainThread) {
-	console.log('JIT using:', randomx_jit_feature())
+	console.log('machine id:', randomx_machine_id())
 	const cache = randomx_init_cache('test key 000', { shared: true })
 
 	let hashes = 0

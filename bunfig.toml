@@ -1,4 +1,4 @@
-preload = ["./scripts/binaryloader.ts"]
+preload = ["./scripts/bun_preload.ts"]
 
 [test]
-preload = ["./scripts/binaryloader.ts"]
+preload = ["./scripts/bun_preload.ts"]

@@ -1,12 +1,13 @@
 import { randomx_superscalarhash, type RxCache } from '../dataset/dataset'
-import { jit_detect, jit_feature_stringify, type JitFeature } from '../detect/detect'
+import { jit_detect, machine_id, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
-import PRODUCTION from '../production'
+
+declare var INSTRUMENT: number
 
 const _feature: JitFeature = jit_detect()
 
-export function randomx_jit_feature() {
-	return jit_feature_stringify(_feature)
+export function randomx_machine_id() {
+	return machine_id(_feature)
 }
 
 // new virtual machine
@@ -20,13 +21,13 @@ export function randomx_create_vm(cache: RxCache) {
 		R(): void
 		Ri(): number
 		Rf(): number
-		// when !PRODUCTION
+		// when INSTRUMENT
 		b(ic: number, pc: number, mx: number, ma: number, sp_addr0: number, sp_addr1: number): void
 	}
 
 	const SCRATCH_SIZE = 16 * 1024
 
-	const wi_imports = PRODUCTION ? {} : {
+	const wi_imports = !INSTRUMENT ? {} : {
 		e: {
 			ch: env_npf_putc
 		}
@@ -46,7 +47,7 @@ export function randomx_create_vm(cache: RxCache) {
 	}
 
 	// inspect the VM JIT code
-	if (!PRODUCTION) {
+	if (INSTRUMENT) {
 		jit_imports.e.b = exports.b
 	}
 

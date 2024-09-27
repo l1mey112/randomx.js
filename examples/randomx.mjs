@@ -1,4 +1,4 @@
-const { randomx_create_vm, randomx_init_cache, randomx_machine_id } = require('../dist/cjs/index')
+import { randomx_create_vm, randomx_init_cache, randomx_machine_id } from '../dist/esm/index.mjs'
 
 console.log('machine id:', randomx_machine_id())
 
