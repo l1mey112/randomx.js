@@ -18,9 +18,7 @@ export function randomx_create_vm(cache: RxCache) {
 		i(feature: JitFeature): number // returns scratch buffer
 		I(is_hex: boolean): void
 		H(data_length: number): number
-		R(): void
-		Ri(): number
-		Rf(): number
+		R(): number // iterate virtual machine
 		// when INSTRUMENT
 		b(ic: number, pc: number, mx: number, ma: number, sp_addr0: number, sp_addr1: number): void
 	}
@@ -58,23 +56,31 @@ export function randomx_create_vm(cache: RxCache) {
 
 		// install seed S from H
 		exports.I(is_hex)
-		let p = 0
-		while (p < H.length) {
-			const chunk = H.subarray(p, p + SCRATCH_SIZE)
-			p += SCRATCH_SIZE
-			scratch.set(chunk)
-			exports.H(chunk.length)
+		if (H.length <= SCRATCH_SIZE) {
+			// most likely case
+			scratch.set(H)
+			exports.H(H.length)
+		} else {
+			let p = 0
+			while (p < H.length) {
+				const chunk = H.subarray(p, p + SCRATCH_SIZE)
+				p += SCRATCH_SIZE
+				scratch.set(chunk)
+				exports.H(chunk.length)
+			}
 		}
-		exports.R()
 
-		do {
-			const jit_size = exports.Ri()
-			const jit_buffer = new Uint8Array(memory.buffer, scratch_ptr, jit_size)
-			const jit_wm = new WebAssembly.Module(jit_buffer)
+		let jit_size: number
+		while (1) {
+			jit_size = exports.R()
+			if (jit_size === 0) {
+				break
+			}
+			const jit_wm = new WebAssembly.Module(scratch.subarray(0, jit_size))
 			const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)
 			const jit_exports = jit_wi.exports as { d: () => void }
 			jit_exports.d()
-		} while (exports.Rf())
+		}
 	}
 
 	return {

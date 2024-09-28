@@ -29,6 +29,7 @@ void *init(uint8_t f) {
 WASM_EXPORT("I")
 void init_new_hash(bool h) {
 	is_hex = h;
+	program_count = RANDOMX_PROGRAM_COUNT;
 	blake2b_init_key(SS, 64, NULL, 0);
 }
 
@@ -43,34 +44,36 @@ alignas(16) rx_program_t P; // program buffer
 alignas(16) rx_vm_t VM;
 uint8_t scratchpad[RANDOMX_SCRATCHPAD_L3];
 
-WASM_EXPORT("R")
-void finalise_hash() {
-	blake2b_finalise(SS, S);
-
-	// S now contains the seed, modify it after scratchpad initialisation
-	fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
-
-	// reset rounding mode, rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
-	VM.fprc = 0;
-	program_count = RANDOMX_PROGRAM_COUNT;
-}
+static void final_vm_iteration();
 
 // repeat VM calls require the JITted code to be executed.
-// this means we have to return back to caller for the JS to compile and invoke it.
-//
-// we have to execute the VM at most RANDOMX_PROGRAM_COUNT times, and its absolutely
-// ugly and unmaintainable to turn a while loop with special cases into a suspendable
-// generator using a single function. i would rather split it up into a `Ri` + `Rf`.
-// i am sure JS->WASM calls are negligible in performance.
-//
-// do {
-//     exports.Ri()
-// } while (exports.Rf())
-//
+// this means we have to return back to caller for the JS to compile and invoke it
 
-WASM_EXPORT("Ri")
+// handle all steps with a single function, to minimise the number of inter-language calls
+WASM_EXPORT("R")
 uint32_t iterate_vm() {
-	assert(program_count != 0);
+	// first iteration
+	if (program_count == RANDOMX_PROGRAM_COUNT) {
+		blake2b_finalise(SS, S);
+
+		// S now contains the seed, modify it after scratchpad initialisation
+		fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
+
+		// reset rounding mode, rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
+		VM.fprc = 0;
+		program_count = RANDOMX_PROGRAM_COUNT;
+	} else if (program_count == 0) {
+		// "The last iteration skips steps 9 and 10."
+		final_vm_iteration();
+		return 0;
+	} else {
+		// steps 9, 10
+		// after middle iterations
+		blake2b(S, 64, &VM, 256); // S = Hash512(RegisterFile)
+	}
+
+	// middle iterations
+	program_count--;
 
 	// set VM.r[0..7] to 0, everything else is initialised in vm_program and in the VM
 	memset(&VM.r, 0, sizeof(VM.r));
@@ -80,25 +83,7 @@ uint32_t iterate_vm() {
 	return jit_vm(&VM, &P, scratchpad, jit_buffer);
 }
 
-void final_vm_iteration();
-
-WASM_EXPORT("Rf")
-bool finalise_vm() {
-	assert(program_count != 0);
-
-	// "The last iteration skips steps 9 and 10."
-	if (program_count == 1) {
-		final_vm_iteration();
-	} else {
-		// steps 9, 10
-		blake2b(S, 64, &VM, 256); // S = Hash512(RegisterFile)
-	}
-	program_count--;
-
-	return program_count != 0;
-}
-
-void final_vm_iteration() {
+static void final_vm_iteration() {
 	// A = AesHash1R(Scratchpad), overwrite the 64 bytes of RegisterFile
 	hashAes1Rx4(scratchpad, RANDOMX_SCRATCHPAD_L3, (void *)&VM.a);
 

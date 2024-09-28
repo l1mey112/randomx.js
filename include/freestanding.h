@@ -30,11 +30,15 @@
 			__builtin_unreachable(); \
 	} while (0)
 
+#if INSTRUMENT
 #define assert(cond)          \
 	do {                      \
 		if (!(cond))          \
 			__builtin_trap(); \
 	} while (0)
+#else
+#define assert(cond)
+#endif
 
 #define unreachable() __builtin_unreachable()
 #define likely(x) __builtin_expect(!!(x), 1)
