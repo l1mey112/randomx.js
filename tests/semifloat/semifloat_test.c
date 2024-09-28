@@ -249,7 +249,7 @@ bool fp_heap() {
 		RUNFOR_VU(fsqrt_fma_3, FSQRT_FMA_3);
 	}
 
-	printf("FP heap: %lu infix, %lu unary, %lu total (git %s)\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu);
+	printf("FP heap: %lu infix, %lu unary, %lu total\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu);
 
 	int lowbounds[] = {FADD_0, FSUB_0, FMUL_0, FDIV_0, FSQRT_0};
 	for (int v = 0; v < FCOUNT; v++) {

@@ -1,4 +1,4 @@
-import { randomx_create_vm, randomx_init_cache, randomx_machine_id } from '../dist/esm/index.mjs'
+import { randomx_create_vm, randomx_init_cache, randomx_machine_id } from '../pkg-randomx.js/dist/esm/index.mjs'
 
 console.log('machine id:', randomx_machine_id())
 

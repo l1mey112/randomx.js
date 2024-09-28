@@ -1,5 +1,5 @@
 const { Worker, isMainThread, parentPort } = require('worker_threads')
-const { randomx_create_vm, randomx_init_cache, randomx_machine_id } = require('../dist/cjs/index')
+const { randomx_create_vm, randomx_init_cache, randomx_machine_id } = require('../pkg-randomx.js/dist/cjs/index')
 const { availableParallelism } = require('os')
 
 const threads = availableParallelism()

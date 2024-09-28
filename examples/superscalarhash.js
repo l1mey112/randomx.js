@@ -1,4 +1,4 @@
-const { randomx_init_cache, randomx_superscalarhash } = require('../dist/cjs/index')
+const { randomx_init_cache, randomx_superscalarhash } = require('../pkg-randomx.js/dist/cjs/index')
 
 const cache = randomx_init_cache()
 const hash = randomx_superscalarhash(cache)

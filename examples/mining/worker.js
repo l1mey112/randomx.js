@@ -1,4 +1,4 @@
-import { randomx_create_vm } from 'https://cdn.jsdelivr.net/npm/randomx.js/dist/web/index.js'
+import { randomx_create_vm } from './lib.js'
 
 self.onmessage = (e) => {
 	const cache = e.data
