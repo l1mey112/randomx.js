@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#if INSTRUMENT
+#if INSTRUMENT == 1
 // we will be inserting breakpoints in the JITted code
 static uint8_t jit_buffer[128 * 1024];
 #else
@@ -109,8 +109,8 @@ void final_vm_iteration() {
 	}
 }
 
-#if INSTRUMENT
-#if 0 // 1 to enable
+#if INSTRUMENT != 0
+#if INSTRUMENT == 1
 
 const char *inst_tos[] = {
 	[IADD_RS] = "IADD_RS",
