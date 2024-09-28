@@ -469,6 +469,24 @@ uint32_t jit_vm_main(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t 
 	THUNK_END;
 }
 
+#if INSTRUMENT
+static char rx_name_hash[6];
+static unsigned rx_seed = 123123;
+
+static void rx_name_roll_new() {
+#define RAND() (rx_seed = (16807 * rx_seed) % 2147483647, rx_seed)
+	// name hash use characters from 0-9
+	rx_name_hash[0] = '0' + (RAND() % 10);
+	rx_name_hash[1] = '0' + (RAND() % 10);
+	rx_name_hash[2] = '0' + (RAND() % 10);
+	rx_name_hash[3] = '0' + (RAND() % 10);
+	rx_name_hash[4] = '0' + (RAND() % 10);
+	rx_name_hash[5] = '0' + (RAND() % 10);
+#undef RAND
+}
+
+#endif
+
 // will mutate instructions in `P`
 uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf) {
 	THUNK_BEGIN;
@@ -787,12 +805,60 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 		// function names (subsection)
 		WASM_SECTION(0x01, {
 			// vec(function_idx, name)
-			WASM_U8(2); // entries = vec(1)
+			WASM_U8(23); // entries = vec(23)
 
+			WASM_U8(FIDX(0));
+			{
+				// to avoid name collisions in profiled output/flamegraph
+				rx_name_roll_new();
+				WASM_U8(10 + 6);
+				WASM_BUF_STR("randomx_vm");
+				WASM_BUF(rx_name_hash, 6);
+			}
 			WASM_U8($MUL128HI);
 			WASM_U8_SHORT_NAME("mul128hi");
 			WASM_U8($IMUL128HI);
 			WASM_U8_SHORT_NAME("imul128hi");
+			WASM_U8(FIDX(3));
+			WASM_U8_SHORT_NAME("fadd_0");
+			WASM_U8(FIDX(4));
+			WASM_U8_SHORT_NAME("fadd_1");
+			WASM_U8(FIDX(5));
+			WASM_U8_SHORT_NAME("fadd_2");
+			WASM_U8(FIDX(6));
+			WASM_U8_SHORT_NAME("fadd_3");
+			WASM_U8(FIDX(7));
+			WASM_U8_SHORT_NAME("fsub_0");
+			WASM_U8(FIDX(8));
+			WASM_U8_SHORT_NAME("fsub_1");
+			WASM_U8(FIDX(9));
+			WASM_U8_SHORT_NAME("fsub_2");
+			WASM_U8(FIDX(10));
+			WASM_U8_SHORT_NAME("fsub_3");
+			WASM_U8(FIDX(11));
+			WASM_U8_SHORT_NAME("fmul_0");
+			WASM_U8(FIDX(12));
+			WASM_U8_SHORT_NAME("fmul_1");
+			WASM_U8(FIDX(13));
+			WASM_U8_SHORT_NAME("fmul_2");
+			WASM_U8(FIDX(14));
+			WASM_U8_SHORT_NAME("fmul_3");
+			WASM_U8(FIDX(15));
+			WASM_U8_SHORT_NAME("fdiv_0");
+			WASM_U8(FIDX(16));
+			WASM_U8_SHORT_NAME("fdiv_1");
+			WASM_U8(FIDX(17));
+			WASM_U8_SHORT_NAME("fdiv_2");
+			WASM_U8(FIDX(18));
+			WASM_U8_SHORT_NAME("fdiv_3");
+			WASM_U8(FIDX(19));
+			WASM_U8_SHORT_NAME("fsqrt_0");
+			WASM_U8(FIDX(20));
+			WASM_U8_SHORT_NAME("fsqrt_1");
+			WASM_U8(FIDX(21));
+			WASM_U8_SHORT_NAME("fsqrt_2");
+			WASM_U8(FIDX(22));
+			WASM_U8_SHORT_NAME("fsqrt_3");
 		});
 
 		// local names (subsection)

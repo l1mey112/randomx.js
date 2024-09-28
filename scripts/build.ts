@@ -59,7 +59,7 @@ async function compile_for(PATH: string) {
 
 	const opt: BuildOptions = {
 		sourcemap: true,
-		minify: true,
+		minify: INSTRUMENT === 0,
 		bundle: true,
 		entryPoints: [INDEX],
 		loader: {

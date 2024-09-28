@@ -96,6 +96,10 @@ uint32_t u32_leb128(uint32_t val, uint8_t data[5]);
 	memcpy(p, name, sizeof(name "") - 1); \
 	p += sizeof(name "") - 1
 
+#define WASM_BUF_STR(str) \
+	memcpy(p, str, sizeof(str "") - 1);   \
+	p += sizeof(str "") - 1
+
 #define WASM_BUF(ptr, size) \
 	memcpy(p, ptr, size);   \
 	p += size

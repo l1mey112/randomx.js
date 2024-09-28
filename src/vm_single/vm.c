@@ -56,16 +56,24 @@ uint32_t iterate_vm() {
 		blake2b_finalise(SS, S);
 
 		// S now contains the seed, modify it after scratchpad initialisation
+		TIMEIT("scratchpad init");
 		fillAes1Rx4(S, RANDOMX_SCRATCHPAD_L3, scratchpad); // 2 MiBs
+		TIMEIT_END("scratchpad init");
 
 		// reset rounding mode, rounding mode is preserved over RANDOMX_PROGRAM_COUNT programs
 		VM.fprc = 0;
 		program_count = RANDOMX_PROGRAM_COUNT;
 	} else if (program_count == 0) {
+		TIMEIT_END("vm iteration");
+
 		// "The last iteration skips steps 9 and 10."
+		TIMEIT("scratchpad hash");
 		final_vm_iteration();
+		TIMEIT_END("scratchpad hash");
 		return 0;
 	} else {
+		TIMEIT_END("vm iteration");
+
 		// steps 9, 10
 		// after middle iterations
 		blake2b(S, 64, &VM, 256); // S = Hash512(RegisterFile)
@@ -79,7 +87,10 @@ uint32_t iterate_vm() {
 
 	fillAes4Rx4(S, sizeof(P), (void *)&P); // program generation
 	vm_program(&VM, &P);
-	return jit_vm(&VM, &P, scratchpad, jit_buffer);
+	uint32_t code_size = jit_vm(&VM, &P, scratchpad, jit_buffer);
+
+	TIMEIT("vm iteration");
+	return code_size;
 }
 
 static void final_vm_iteration() {
@@ -93,7 +104,6 @@ static void final_vm_iteration() {
 	}
 }
 
-#if INSTRUMENT != 0
 #if INSTRUMENT == 1
 
 const char *inst_tos[] = {
@@ -164,18 +174,4 @@ void breakpoint(uint32_t ic, int pc, uint32_t mx, uint32_t ma, uint32_t sp_addr0
 	printf("\n");
 #undef C
 }
-
-#else
-
-WASM_EXPORT("b")
-void breakpoint(uint32_t ic, int pc, uint32_t mx, uint32_t ma, uint32_t sp_addr0, uint32_t sp_addr1) {
-	(void)ic;
-	(void)pc;
-	(void)mx;
-	(void)ma;
-	(void)sp_addr0;
-	(void)sp_addr1;
-}
-
-#endif
 #endif

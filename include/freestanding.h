@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #ifndef INFINITY
 #define INFINITY (__builtin_inff())
 #endif
@@ -58,4 +60,14 @@ int snprintf(char *restrict str, unsigned long size, const char *restrict format
 #else
 #define printf(...)
 #define snprintf(...)
+#endif
+
+#if INSTRUMENT == 2
+WASM_IMPORT("b")
+void timeit(const char *name, bool finish);
+#define TIMEIT(name) timeit(name, false)
+#define TIMEIT_END(name) timeit(name, true)
+#else
+#define TIMEIT(name)
+#define TIMEIT_END(name)
 #endif

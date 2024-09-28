@@ -1,6 +1,7 @@
 import { randomx_superscalarhash, type RxCache } from '../dataset/dataset'
 import { jit_detect, machine_id, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
+import { timeit } from '../printf/timeit'
 
 declare var INSTRUMENT: number
 
@@ -25,15 +26,28 @@ export function randomx_create_vm(cache: RxCache) {
 
 	const SCRATCH_SIZE = 16 * 1024
 
-	const wi_imports = !INSTRUMENT ? {} : {
-		e: {
-			ch: env_npf_putc
+	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {}
+
+	let memory: WebAssembly.Memory | undefined
+	let the_timeit: ReturnType<typeof timeit>
+
+	if (INSTRUMENT) {
+		wi_imports.e = {}
+		wi_imports.e.ch = env_npf_putc
+
+		if (INSTRUMENT == 2) {
+			const timed = new Map<string, number>()
+
+			wi_imports.e.b = function (ptr: number, finished: number) {
+				the_timeit.timeit(ptr, finished)
+			}
 		}
 	}
+	
 	const wi = new WebAssembly.Instance(cache.vm, wi_imports as Record<string, any>)
 	const exports = wi.exports as VmModule
 	const scratch_ptr = exports.i(_feature)
-	const memory = exports.memory
+	memory = exports.memory
 	const scratch = new Uint8Array(memory.buffer, scratch_ptr, SCRATCH_SIZE)
 
 	const superscalarhash = randomx_superscalarhash(cache)
@@ -45,8 +59,13 @@ export function randomx_create_vm(cache: RxCache) {
 	}
 
 	// inspect the VM JIT code
-	if (INSTRUMENT) {
+	if (INSTRUMENT == 1) {
 		jit_imports.e.b = exports.b
+	} else if (INSTRUMENT == 2) {
+		the_timeit = timeit(memory!)
+		the_timeit.timeit_init()
+		
+		jit_imports.e.b = function () {}
 	}
 
 	function hash(H: Uint8Array | string, is_hex: boolean) {
@@ -80,6 +99,10 @@ export function randomx_create_vm(cache: RxCache) {
 			const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)
 			const jit_exports = jit_wi.exports as { d: () => void }
 			jit_exports.d()
+		}
+
+		if (INSTRUMENT == 2) {
+			the_timeit.timeit_totals()
 		}
 	}
 

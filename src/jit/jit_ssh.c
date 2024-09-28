@@ -479,6 +479,20 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 		WASM_U8_THUNK({
 			4, 'n', 'a', 'm', 'e', // name = "name"
 		});
+		// function names (subsection)
+		WASM_SECTION(0x01, {
+			// vec(function_idx, name)
+			WASM_U8(3); // entries = vec(3)
+
+			WASM_U8(0); // function index 0
+			WASM_U8_SHORT_NAME("superscalarhash");
+
+			WASM_U8(1); // function index 1
+			WASM_U8_SHORT_NAME("mul128hi");
+
+			WASM_U8(2); // function index 2
+			WASM_U8_SHORT_NAME("imul128hi");
+		});
 		// local names (subsection)
 		WASM_SECTION(0x02, {
 			// vec(function_idx, vec(idx, name))

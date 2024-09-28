@@ -30,18 +30,21 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
 	const wm = new WebAssembly.Module(wasm)
 
-	const wi_imports = !INSTRUMENT ? {
+	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {
 		env: {
 			memory
-		}
-	} : {
-		env: {
-			memory
-		},
-		e: {
-			ch: env_npf_putc
 		}
 	}
+
+	if (INSTRUMENT) {
+		wi_imports.e = {}
+		wi_imports.e.ch = env_npf_putc
+
+		if (INSTRUMENT == 2) {
+			wi_imports.e.b = function (){}
+		}
+	}
+
 	const wi = new WebAssembly.Instance(wm, wi_imports as Record<string, any>)
 
 	const exports = wi.exports as DatasetModule
