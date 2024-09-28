@@ -1,7 +1,6 @@
 #include "argon2fill/argon2fill.h"
 #include "blake2b/blake2b.h"
 #include "cache.h"
-#include "configuration.h"
 #include "freestanding.h"
 
 #include "jit/jit.h"
@@ -17,9 +16,13 @@ static uint8_t jit_buffer[48 * 1024];
 
 static uint8_t cache[RANDOMX_ARGON_MEMORY * ARGON2_BLOCK_SIZE]; // 64-byte cache line
 static ss_program_t programs[RANDOMX_CACHE_ACCESSES];
+static int memory_pages_of_dataset;
+
+// `memory_pages_of_dataset` is to avoid the chicken-and-egg problem, without fucking the build script
 
 WASM_EXPORT("c")
-void *jit() {
+void *jit(int pages) {
+	memory_pages_of_dataset = pages;
 	return jit_buffer;
 }
 
@@ -36,7 +39,7 @@ uint32_t init_new_key(uint32_t key_length, bool is_shared_memory) {
 		ssh_generate(S, &programs[i]);
 	}
 
-	uint32_t wasm_size = jit_ssh(programs, cache, jit_buffer, is_shared_memory);
+	uint32_t wasm_size = jit_ssh(programs, cache, jit_buffer, is_shared_memory, memory_pages_of_dataset);
 
 	return wasm_size;
 }

@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #include "blake2b/blake2b.h"
-#include "configuration.h"
 #include "inst.h"
 
 #define SUPERSCALAR_MAX_SIZE (3 * RANDOMX_SUPERSCALAR_LATENCY + 2)

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "configuration.h"
 #include "freestanding.h"
 #include "jit/inst.h"
 

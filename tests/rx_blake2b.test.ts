@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { random } from 'nanoid'
-import { hash256, hash512, long1024 } from './harness'
+import { hash256, hash512, long1024 } from './rx_harness'
 
 test('hash256', () => {
 	for (let i = 0; i < 1024; i++) {

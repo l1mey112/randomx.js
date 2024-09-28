@@ -1,6 +1,6 @@
 import { RANDOMX_ARGON_MEMORY } from '../include/configuration'
 import { env_npf_putc } from '../src/printf/printf'
-import wasm from './harness.wasm'
+import wasm from './rx_harness.wasm'
 
 const SCRATCH_SIZE = 1024 * 16
 

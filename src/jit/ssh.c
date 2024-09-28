@@ -1,5 +1,4 @@
 #include "../blake2b/blake2b.h"
-#include "configuration.h"
 #include <stdbool.h>
 #include <stdint.h>
 

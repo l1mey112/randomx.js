@@ -7,10 +7,6 @@
 
 #include "rdtsc.h"
 
-#ifndef GIT_HASH
-#define GIT_HASH "unknown"
-#endif
-
 typedef struct running_avg_t running_avg_t;
 
 typedef struct finst_t finst_t;
@@ -253,7 +249,7 @@ bool fp_heap() {
 		RUNFOR_VU(fsqrt_fma_3, FSQRT_FMA_3);
 	}
 
-	printf("FP heap: %lu infix, %lu unary, %lu total (git %s)\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu, GIT_HASH);
+	printf("FP heap: %lu infix, %lu unary, %lu total (git %s)\n", fp_heap_v, fp_heap_vu, fp_heap_v + fp_heap_vu);
 
 	int lowbounds[] = {FADD_0, FSUB_0, FMUL_0, FDIV_0, FSQRT_0};
 	for (int v = 0; v < FCOUNT; v++) {

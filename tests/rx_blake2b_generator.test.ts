@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { blake2b_generator, hash512 } from './harness'
+import { blake2b_generator, hash512 } from './rx_harness'
 import { random } from 'nanoid'
 
 test('hash512 edges', () => {

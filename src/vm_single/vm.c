@@ -1,7 +1,6 @@
 #include "vm/vm.h"
 #include "aes/aes.h"
 #include "blake2b/blake2b.h"
-#include "configuration.h"
 #include "freestanding.h"
 #include "jit/jit.h"
 #include "jit/jit_vm.h"

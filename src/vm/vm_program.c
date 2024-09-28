@@ -1,4 +1,3 @@
-#include "configuration.h"
 #include "freestanding.h"
 #include "vm/vm.h"
 

@@ -2,18 +2,17 @@ import { env_npf_putc } from '../printf/printf'
 import { adjust_imported_shared_memory } from '../wasm_prefix'
 
 // @ts-ignore
-import wasm from './dataset.wasm'
-import wasm_pages from './dataset.wasm.pages'
+import wasm, { wasm_pages } from 'dataset.wasm'
 
 // @ts-ignore
-import vm_wasm from '../vm/vm.wasm'
+import vm_wasm from 'vm.wasm'
 
 declare var INSTRUMENT: number
 
 let _vm_handle: WebAssembly.Module | null = null
 
 type DatasetModule = {
-	c(): number
+	c(pages: number): number
 	K(key_length: number, is_shared: boolean): number
 }
 
@@ -50,7 +49,7 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 }
 
 function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule, is_shared: boolean): RxCache {
-	const jit_begin = exports.c()
+	const jit_begin = exports.c(wasm_pages)
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
 

@@ -2,7 +2,7 @@
 
 import { plugin, type BunPlugin } from "bun"
 
-export const binayloader: BunPlugin = {
+export const binaryloader: BunPlugin = {
 	name: "binaryloader",
 	async setup(build) {
 		build.onLoad({ filter: /\.(wasm)$/ }, async (args) => {
@@ -21,4 +21,4 @@ global.INSTRUMENT = 1
 global.FORMAT = "esm"
 global.ENVIRONMENT = "node"
 
-await plugin(binayloader)
+await plugin(binaryloader)

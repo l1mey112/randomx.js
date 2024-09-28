@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
-import { buffer, module }  from './harness'
-import { randomx_init_cache, randomx_superscalarhash, type Cache } from '../src/dataset/dataset'
+import { buffer, module }  from './rx_harness'
+import { randomx_init_cache, randomx_superscalarhash, type RxCache } from '../pkg-randomx.js/dist/esm/index.mjs'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
@@ -29,7 +29,7 @@ test('chained programs', () => {
 })
 
 test('dataset initialisation', () => {
-	function test_with(cache: Cache) {
+	function test_with(cache: RxCache) {
 		const hash = randomx_superscalarhash(cache)
 
 		const dataset_items_0 = hash(0n)
@@ -43,7 +43,7 @@ test('dataset initialisation', () => {
 		expect(dataset_items_30000000[0]).toEqual(BigInt.asIntN(64, 0x145a5091f7853099n))
 	}
 	
-	let n: Cache
+	let n: RxCache
 
 	n = randomx_init_cache('test key 000')
 	expect(n.memory.buffer).toBeInstanceOf(ArrayBuffer)

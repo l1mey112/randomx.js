@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { randomx_create_vm, randomx_init_cache } from '../src'
+import { randomx_create_vm, randomx_init_cache } from '../pkg-randomx.js/dist/esm/index.mjs'
 
 test('test key 000', async () => {
 	const randomx_cache = randomx_init_cache('test key 000')

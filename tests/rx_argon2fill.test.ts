@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { argon2fill } from './harness'
+import { argon2fill } from './rx_harness'
 
 test('argon2fill', () => {
 	const items = argon2fill(new TextEncoder().encode('test key 000'))

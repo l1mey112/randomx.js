@@ -4,6 +4,8 @@
 
 **RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.** Theorised by its creator and others to be near impossible to run on JS with only web standards, hashes are computed just fine. This is an attempt to build a RandomX implementation that is as fast as possible, compliant with the RandomX specification, simple to read and understand, and matches the reference API as closely as possible.
 
+This project is a monorepo, containing NPM packages [RandomX.js](https://www.npmjs.com/package/randomx.js) and [RandomWOW.js](https://www.npmjs.com/package/randomwow.js). All are hosted here and built in one piece.
+
 ```ts
 // npm i randomx.js
 import { randomx_create_vm, randomx_init_cache } from 'randomx.js'
@@ -46,7 +48,7 @@ node -v; bun -v; chromium --version
 
 Hashrate was speculated to be 1 H/s per thread, this beats it at still a pitiful 20 H/s. On the same machine, 100 H/s per thread is achieved when mining in light/verification mode, so 5x slower ain't that bad. Mining with an initialised dataset (2 GiB allocation) is not supported (though easy to implement), no one on earth would give a webpage multiple gigabytes of memory. **Light/verification mode only, transparent threading is enabled by allocating the cache with the `shared` parameter.**
 
-[Do you want to help improve performance? Critisise, speculate, and provide insight here.](https://github.com/l1mey112/randomx.js/issues/1)
+[Do you want to help improve performance? Criticise, speculate, and provide insight here.](https://github.com/l1mey112/randomx.js/issues/1)
 
 Appreciate the undertaking? Consider a donation.
 

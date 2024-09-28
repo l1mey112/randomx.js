@@ -1,9 +1,7 @@
-#include "configuration.h"
 #include "inst.h"
 #include "jit.h"
 #include "ssh.h"
 #include "wasm_jit.h"
-#include "dataset/dataset.wasm.pages.h"
 
 #include <stdint.h>
 
@@ -317,7 +315,7 @@ uint32_t ssh_jit_programs(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *ca
 	THUNK_END;
 }
 
-uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf, bool is_shared_memory) {
+uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, uint8_t *buf, bool is_shared_memory, int memory_pages_of_dataset) {
 	THUNK_BEGIN;
 
 	WASM_MAGIC();
@@ -361,8 +359,8 @@ uint32_t jit_ssh(ss_program_t prog[RANDOMX_CACHE_ACCESSES], uint8_t *cache_ptr, 
 			is_shared_memory ? 0x03 : 0x01, // shared or not
 		});
 		// limit [..]
-		WASM_I64(DATASET_MEMORY_PAGES);
-		WASM_I64(DATASET_MEMORY_PAGES);
+		WASM_I64(memory_pages_of_dataset);
+		WASM_I64(memory_pages_of_dataset);
 	});
 
 	// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcsec

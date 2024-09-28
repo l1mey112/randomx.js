@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { module }  from './harness'
+import { module } from './rx_harness'
 
 test('reciprocal', () => {
 	expect(module.jit_reciprocal(3n)).toEqual(BigInt.asIntN(64, 12297829382473034410n))
