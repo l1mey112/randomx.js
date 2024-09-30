@@ -39,7 +39,7 @@
 			__builtin_trap(); \
 	} while (0)
 #else
-#define assert(cond)
+#define assert(cond) ((void)(cond))
 #endif
 
 #define unreachable() __builtin_unreachable()

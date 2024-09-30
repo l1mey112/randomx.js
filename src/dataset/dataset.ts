@@ -12,8 +12,8 @@ declare var INSTRUMENT: number
 let _vm_handle: WebAssembly.Module | null = null
 
 type DatasetModule = {
-	c(pages: number): number
-	K(key_length: number, is_shared: boolean): number
+	c(pages: number, is_shared: boolean): number
+	K(key_length: number): number
 }
 
 // can be shared between threads safely if shared memory is enabled
@@ -52,11 +52,11 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 }
 
 function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule, is_shared: boolean): RxCache {
-	const jit_begin = exports.c(wasm_pages)
+	const jit_begin = exports.c(wasm_pages, is_shared)
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
 
-	const jit_size = exports.K(K.length, is_shared) // long blocking
+	const jit_size = exports.K(K.length) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
 	if (!_vm_handle) {

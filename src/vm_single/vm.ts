@@ -2,6 +2,7 @@ import { randomx_superscalarhash, type RxCache } from '../dataset/dataset'
 import { jit_detect, machine_id, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
 import { timeit } from '../printf/timeit'
+import { wasm_pages } from 'vm.wasm'
 
 declare var INSTRUMENT: number
 
@@ -26,28 +27,30 @@ export function randomx_create_vm(cache: RxCache) {
 
 	const SCRATCH_SIZE = 16 * 1024
 
-	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {}
 
-	let memory: WebAssembly.Memory | undefined
 	let the_timeit: ReturnType<typeof timeit>
+	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages })
+	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {
+		env: {
+			memory
+		}
+	}
 
 	if (INSTRUMENT) {
 		wi_imports.e = {}
 		wi_imports.e.ch = env_npf_putc
 
 		if (INSTRUMENT == 2) {
-			const timed = new Map<string, number>()
+			the_timeit = timeit(memory)
+			the_timeit.timeit_init()
 
-			wi_imports.e.b = function (ptr: number, finished: number) {
-				the_timeit.timeit(ptr, finished)
-			}
+			wi_imports.e.b = the_timeit.timeit
 		}
 	}
 	
 	const wi = new WebAssembly.Instance(cache.vm, wi_imports as Record<string, any>)
 	const exports = wi.exports as VmModule
 	const scratch_ptr = exports.i(_feature)
-	memory = exports.memory
 	const scratch = new Uint8Array(memory.buffer, scratch_ptr, SCRATCH_SIZE)
 
 	const superscalarhash = randomx_superscalarhash(cache)
@@ -62,9 +65,6 @@ export function randomx_create_vm(cache: RxCache) {
 	if (INSTRUMENT == 1) {
 		jit_imports.e.b = exports.b
 	} else if (INSTRUMENT == 2) {
-		the_timeit = timeit(memory!)
-		the_timeit.timeit_init()
-		
 		jit_imports.e.b = function () {}
 	}
 

@@ -111,8 +111,11 @@ endif
 
 pkg-randomx.js/vm.wasm: $(VM_SINGLE_RX_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
+		-Wl,--import-memory \
 		-o $@ $(VM_SINGLE_RX_C_SOURCES) \
 		$(shell scripts/deflist.ts pkg-randomx.js/configuration.toml)
+
+	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
 
 ifeq ($(INSTRUMENT),0)
 	wasm-strip $@
@@ -121,8 +124,11 @@ endif
 
 pkg-randomwow.js/vm.wasm: $(VM_SINGLE_WOW_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
+		-Wl,--import-memory \
 		-o $@ $(VM_SINGLE_WOW_C_SOURCES) \
 		$(shell scripts/deflist.ts pkg-randomwow.js/configuration.toml)
+
+	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
 
 ifeq ($(INSTRUMENT),0)
 	wasm-strip $@
