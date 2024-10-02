@@ -3,6 +3,7 @@
 import esbuild from 'esbuild'
 import type { BuildOptions, Plugin } from 'esbuild'
 import { $ } from 'bun'
+import path from 'node:path'
 
 // 0: production
 // 1: single step VM by breakpoint (with printf)
@@ -14,10 +15,23 @@ if (k.exitCode !== 0) {
 	process.exit(k.exitCode)
 }
 
-const BASEPATHS = ['pkg-randomx.js', 'pkg-randomwow.js']
+/* const BASEPATHS = [
+	'pkg-randomx.js/index.ts',
+	'pkg-randomwow.js/index.ts',
+	'pkg-xmr-rx-webminer/index.ts',
+] */
 
-async function compile_for(PATH: string) {
-	const INDEX = `${PATH}/index.ts`
+const BASEPATHS = {
+	'pkg-randomx.js': ['index.ts'],
+	'pkg-randomwow.js': ['index.ts'],
+	'pkg-xmr-rx-webminer': ['index.ts'],
+}
+
+async function compile_for(PATH: string, INDICES: string[]) {
+	// set INDICES to PATH/INDICES
+	for (let i = 0; i < INDICES.length; i++) {
+		INDICES[i] = `${PATH}/${INDICES[i]}`
+	}
 
 	const wasm_plugin: Plugin = {
 		name: 'wasm',
@@ -54,19 +68,66 @@ async function compile_for(PATH: string) {
 					loader: 'binary',
 				}
 			})
-		},
+		}
+	}
+
+	const url_plugin: Plugin = {
+		name: 'url',
+		setup(build) {
+			const simplecache = new Map<string, string>()
+			
+			build.onResolve({ filter: /^url:/ }, (args) => {
+				return {
+					path: path.resolve(args.resolveDir, args.path.slice(4)),
+					namespace: 'url-import',
+				}
+			})
+
+			build.onLoad({ filter: /.*/, namespace: 'url-import' }, async (args) => {
+				if (simplecache.has(args.path)) {
+					return {
+						contents: simplecache.get(args.path),
+						loader: 'dataurl',
+					}
+				}
+
+				const opt: BuildOptions = {
+					...build.initialOptions,
+					entryPoints: [args.path],
+					bundle: true,
+					format: 'esm',
+					write: false,
+					sourcemap: false,
+				}
+
+				// @ts-expect-error
+				opt.define.FORMAT = '"esm"'
+
+				const built = await esbuild.build(opt as { write: false })
+
+				const text = built.outputFiles[0].text
+				simplecache.set(args.path, JSON.stringify(text))
+
+				const dataurl = `data:application/javascript;utf8,${encodeURIComponent(text)}`
+
+				return {
+					loader: 'js',
+					contents: `export default new URL(${JSON.stringify(dataurl)})`,
+				}
+			})
+		}		
 	}
 
 	const opt: BuildOptions = {
 		sourcemap: true,
 		minify: INSTRUMENT === 0,
 		bundle: true,
-		entryPoints: [INDEX],
+		entryPoints: INDICES,
 		loader: {
 			'.wasm': 'binary',
 		},
-		external: ['os'],
-		plugins: [wasm_plugin],
+		external: ['os', 'worker_threads'],
+		plugins: [wasm_plugin, url_plugin],
 	}
 
 	await Promise.all([
@@ -113,10 +174,16 @@ async function compile_for(PATH: string) {
 		// fuck this shit - dts-bundle-generator doesn't even care about global types or modules
 		// https://github.com/timocov/dts-bundle-generator/discussions/232
 	
-		$`bunx dts-bundle-generator --project tsconfig.build.json -o ${PATH}/dist/index.d.ts --no-banner ${INDEX}`.nothrow().then(
+		/* $`bunx dts-bundle-generator --project tsconfig.build.json -o ${PATH}/dist/index.d.ts --no-banner ${INDICES[0]}`.nothrow().then(
 			() => $`cp ${PATH}/dist/index.d.ts ${PATH}/dist/cjs/index.d.ts; cp ${PATH}/dist/index.d.ts ${PATH}/dist/esm/index.d.mts`
-		),
+		), */
 	])
 }
 
-await Promise.all(BASEPATHS.map(compile_for))
+const promises: Promise<any>[] = []
+
+for (const [PATH, ENTRYPOINTS] of Object.entries(BASEPATHS)) {
+	promises.push(compile_for(PATH, ENTRYPOINTS))
+}
+
+await Promise.all(promises)

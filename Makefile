@@ -31,6 +31,8 @@ DATASET_C_SOURCES := $(sort $(shell find src/dataset -type f -name '*.c') $(BLAK
 VM_SINGLE_RX_C_SOURCES := $(sort $(VM_RX_C_SOURCES) $(_VM_SINGLE_C))
 VM_SINGLE_WOW_C_SOURCES := $(sort $(VM_WOW_C_SOURCES) $(_VM_SINGLE_C))
 
+VM_MINER_RX_C_SOURCES := $(sort $(VM_RX_C_SOURCES) $(shell find src/vm_miner -type f -name '*.c'))
+
 # tests
 TESTS_C_SOURCES := $(sort tests/rx_harness.c $(BLAKE2B_C_SOURCES) $(PRINTF_C_SOURCES) $(JIT_C_SOURCES) $(DATASET_C_SOURCES) $(ARGON2FILL_C_SOURCES) $(AES_RX_C_SOURCES) $(VM_RX_C_SOURCES))
 
@@ -51,7 +53,7 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(IFLAGS) \
 RXFLAGS = -DWASM_VM_PAGES=$(shell scripts/memorypages.ts )
 
 # main entrypoints
-all: pkg-randomx.js/dataset.wasm pkg-randomwow.js/dataset.wasm pkg-randomx.js/vm.wasm pkg-randomwow.js/vm.wasm $(WAT_WASM_FILES) \
+all: pkg-randomx.js/dataset.wasm pkg-randomwow.js/dataset.wasm pkg-xmr-rx-webminer/dataset.wasm pkg-randomx.js/vm.wasm pkg-randomwow.js/vm.wasm pkg-xmr-rx-webminer/vm.wasm $(WAT_WASM_FILES) \
 	tests/rx_harness.wasm tests/semifloat/semifloat
 
 .PHONY: clean
@@ -109,6 +111,9 @@ ifeq ($(INSTRUMENT),0)
 	wasm-opt -all -O4 -Oz $@ -o $@
 endif
 
+pkg-xmr-rx-webminer/dataset.wasm: pkg-randomx.js/dataset.wasm
+	cp $< $@
+
 pkg-randomx.js/vm.wasm: $(VM_SINGLE_RX_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
 		-Wl,--import-memory \
@@ -127,6 +132,19 @@ pkg-randomwow.js/vm.wasm: $(VM_SINGLE_WOW_C_SOURCES) $(H_SOURCES)
 		-Wl,--import-memory \
 		-o $@ $(VM_SINGLE_WOW_C_SOURCES) \
 		$(shell scripts/deflist.ts pkg-randomwow.js/configuration.toml)
+
+	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
+
+ifeq ($(INSTRUMENT),0)
+	wasm-strip $@
+	wasm-opt -all -O4 -Oz $@ -o $@
+endif
+
+pkg-xmr-rx-webminer/vm.wasm: $(VM_MINER_RX_C_SOURCES) $(H_SOURCES)
+	clang -O3 $(CFLAGS) $(LDFLAGS) \
+		-Wl,--import-memory \
+		-o $@ $(VM_MINER_RX_C_SOURCES) \
+		$(shell scripts/deflist.ts pkg-randomx.js/configuration.toml)
 
 	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
 

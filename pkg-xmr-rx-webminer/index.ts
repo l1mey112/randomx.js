@@ -1,0 +1,1 @@
+import '../src/host_miner/miner.ts'

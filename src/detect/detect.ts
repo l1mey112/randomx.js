@@ -74,9 +74,9 @@ if (ENVIRONMENT === 'node') {
 	// @ts-ignore
 	if (FORMAT === 'esm') {
 		// @ts-ignore
-		node_os = await import('os')
+		node_os = /* @__PURE__ */ await import('os')
 	} else {
-		node_os = require('os')
+		node_os = /* @__PURE__ */ require('os')
 	}
 }
 

@@ -25,7 +25,8 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    "typeRoots": [] // use on build
+    "typeRoots": ["node_modules/@types/node"], // use on build
+    "stripInternal": true
   },
   "include": ["wasm.d.ts", "tests/**/*.ts", "src/**/*.ts", "include/**/*.ts"],
 }

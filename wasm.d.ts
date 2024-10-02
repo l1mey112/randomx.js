@@ -4,3 +4,8 @@ declare module "*.wasm" {
 	export default content
 	export const wasm_pages: number
 }
+
+declare module "url:*" {
+	const content: URL
+	export default content
+}

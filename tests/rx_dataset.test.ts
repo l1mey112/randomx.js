@@ -1,6 +1,7 @@
 import { test, expect } from 'bun:test'
 import { buffer, module }  from './rx_harness'
 import { randomx_init_cache, randomx_superscalarhash, type RxCache } from '../pkg-randomx.js/dist/esm/index.mjs'
+import type { RxCacheHandle } from '../src/dataset/dataset'
 
 test('chained programs', () => {
 	const key = new TextEncoder().encode('test key 000')
@@ -29,7 +30,7 @@ test('chained programs', () => {
 })
 
 test('dataset initialisation', () => {
-	function test_with(cache: RxCache) {
+	function test_with(cache: RxCacheHandle) {
 		const hash = randomx_superscalarhash(cache)
 
 		const dataset_items_0 = hash(0n)
@@ -46,9 +47,9 @@ test('dataset initialisation', () => {
 	let n: RxCache
 
 	n = randomx_init_cache('test key 000')
-	expect(n.memory.buffer).toBeInstanceOf(ArrayBuffer)
-	test_with(n)
+	expect(n.handle.memory.buffer).toBeInstanceOf(ArrayBuffer)
+	test_with(n.handle)
 	n = randomx_init_cache('test key 000', { shared: true })
-	expect(n.memory.buffer).toBeInstanceOf(SharedArrayBuffer)
-	test_with(n)
+	expect(n.handle.memory.buffer).toBeInstanceOf(SharedArrayBuffer)
+	test_with(n.handle)
 })
