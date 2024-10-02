@@ -22,7 +22,7 @@ if (isMainThread) {
 		console.log(`initialising thread ${i}`)
 		const worker = new Worker(__filename)
 
-		worker.postMessage(cache)
+		worker.postMessage(cache.handle)
 		worker.on('message', onmessage)
 	}
 
