@@ -9,7 +9,7 @@
 import { randomx_create_vm, randomx_init_cache } from 'randomx.js'
 
 const cache = randomx_init_cache('optional key')
-const randomx = randomx_create_vm(cache)
+const randomx = randomx_create_vm(cache.handle)
 
 console.log(randomx.calculate_hash('hello world')) // Uint8Array
 ```

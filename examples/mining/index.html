@@ -29,7 +29,7 @@
 				type: 'module'
 			})
 
-			worker.postMessage(cache)
+			worker.postMessage(cache.handle)
 			worker.onmessage = onmessage
 		}
 
