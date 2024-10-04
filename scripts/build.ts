@@ -174,9 +174,9 @@ async function compile_for(PATH: string, INDICES: string[]) {
 		// fuck this shit - dts-bundle-generator doesn't even care about global types or modules
 		// https://github.com/timocov/dts-bundle-generator/discussions/232
 	
-		/* $`bunx dts-bundle-generator --project tsconfig.build.json -o ${PATH}/dist/index.d.ts --no-banner ${INDICES[0]}`.nothrow().then(
+		$`bunx dts-bundle-generator --project tsconfig.build.json -o ${PATH}/dist/index.d.ts --no-banner ${INDICES[0]}`.nothrow().then(
 			() => $`cp ${PATH}/dist/index.d.ts ${PATH}/dist/cjs/index.d.ts; cp ${PATH}/dist/index.d.ts ${PATH}/dist/esm/index.d.mts`
-		), */
+		),
 	])
 }
 

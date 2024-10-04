@@ -14,7 +14,7 @@ let cache = null
 	console.log(`cache construction time ${time.toFixed(1)} ms`)
 }
 
-const randomx = randomx_create_vm(cache.handle)
+const randomx = randomx_create_vm(cache)
 
 const samples = []
 

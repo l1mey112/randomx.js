@@ -1,7 +1,7 @@
 const { randomx_init_cache, randomx_superscalarhash } = require('../pkg-randomx.js/dist/cjs/index')
 
 const cache = randomx_init_cache()
-const hash = randomx_superscalarhash(cache.handle)
+const hash = randomx_superscalarhash(cache)
 
 function part(value) {
 	return hash(BigInt(value)).map(value => '0x' + BigInt.asUintN(64, value).toString(16))
