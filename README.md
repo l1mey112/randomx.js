@@ -59,7 +59,7 @@ Appreciate the undertaking? Consider a donation.
 
 ## Implmentation
 
-This codebase can be used to learn about RandomX, and its individual stages implemented with simple code. The library contains zero JavaScript dependencies, with pure freestanding C code that doesn't depend on a standard library. **All C++ code has been reimplemented or removed. C++ is a cancer that made the original library impossible to understand in one piece.**
+This codebase can be used to learn about RandomX, and its individual stages implemented with simple code. The library contains zero JavaScript dependencies, with pure freestanding C code that doesn't depend on a standard library. ~~**All C++ code has been reimplemented or removed. C++ is a cancer that made the original library impossible to understand in one piece.**~~ I'm sorry for being so rude. Just take a look at the original codebase's combinatorial explosion of templating and inheritance, use of exceptions, all spread between 10 different files for a single class implementation. For first readers, good luck trying to understand how it all works without reading the specification.
 
 ![RandomX.js](media/overview.png)
 
