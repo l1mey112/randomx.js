@@ -13,10 +13,14 @@ const defs: string[] = []
 
 for (let [key, value] of Object.entries(toml)) {
 	if (typeof value === 'string') {
-		// convert string into \x00\x01\x02 format
-		const bytes = new TextEncoder().encode(value)
-		const hex = Array.from(bytes).map(byte => '\\x' + byte.toString(16).padStart(2, '0')).join('')
+		// find and replace all \xBB
+		const bytes = new Uint8Array(
+			value.replace(/\\x([0-9a-fA-F]{2})/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+				.split('')
+				.map(char => char.charCodeAt(0))
+		)
 
+		const hex = Array.from(bytes).map(byte => '\\x' + byte.toString(16).padStart(2, '0')).join('')
 		value = `"\\"${hex}\\""`
 	}
 	
