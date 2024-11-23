@@ -1,6 +1,6 @@
 # RandomX.js
 
-[RandomX.js](https://github.com/l1mey112/randomx.js) ([NPM](https://www.npmjs.com/package/randomx.js)) | [RandomWOW.js](https://github.com/l1mey112/randomx.js/tree/randomwow) ([NPM](https://www.npmjs.com/package/randomwow.js))
+[RandomX.js](https://github.com/l1mey112/randomx.js) ([NPM](https://www.npmjs.com/package/randomx.js)) | [RandomWOW.js](https://github.com/l1mey112/randomx.js) ([NPM](https://www.npmjs.com/package/randomwow.js))
 
 **RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.** Theorised by its creator and others to be near impossible to run on JS with only web standards, hashes are computed just fine. This is an attempt to build a RandomX implementation that is as fast as possible, compliant with the RandomX specification, simple to read and understand, and matches the reference API as closely as possible.
 
@@ -57,11 +57,13 @@ Appreciate the undertaking? Consider a donation.
 | XMR  | 85vt1KvVz82Dd7AoVWXxnPCubutVT9NRNTAoxKFnXNpzcUfLFZ7rBtjbxonPTD5roE998XczLAoCrUD7tPS84AUQ8cZXHRM |
 | WOW  | WW3asfacxETEgtUFVXGBfnJUqmMgNrVdWJTDouT63Ly4B1B9xiqj2g6bDPS8jZNn6pXY5pj4dnmTtL1gLRTAxXwz1LQhsua1R |
 
+**WARNING:** Do not use this library with Bun to compute hashes in a "production" environment. I am seeing halts/freezes (50/50) and incorrect data (on some machines, 5/95). I have yet to place a bug report, just assume Bun isn't "production ready" yet. Just to run my test harness, `bun test` (which is quite nice), I often need to restart it to get past the `randomx.test.ts` and `randomxwow.test.ts` tests without freezing up. Other than that, Bun is pretty good.
+
 ## Implmentation
 
-This codebase can be used to learn about RandomX, and its individual stages implemented with simple code. The library contains zero JavaScript dependencies, with pure freestanding C code that doesn't depend on a standard library. ~~**All C++ code has been reimplemented or removed. C++ is a cancer that made the original library impossible to understand in one piece.**~~ I'm sorry for being so rude. Just take a look at the original codebase's combinatorial explosion of templating and inheritance, use of exceptions, all spread between 10 different files for a single class implementation. For first readers, good luck trying to understand how it all works without reading the specification.
+This codebase can be used to learn about RandomX, and its individual stages implemented with simple code. The library contains zero JavaScript dependencies, with pure freestanding C code that doesn't depend on a standard library.
 
-![RandomX.js](media/overview.png)
+![RandomX.js high level overview](media/overview.png)
 
 Virtual machine executions use a JIT compiler ([superscalarhash](src/jit/jit_ssh.c), [randomx](src/jit/jit_vm.c)) to generate WASM on the fly, **the library does not use an interpreter.** The SuperscalarHash function can be used separately, with its implementation also being JIT code. To generate hashes the library calls into the JIT which hands back the code, which is then executed, repeating up till `RANDOMX_PROGRAM_COUNT` ([JS entrypoint](src/vm/vm.ts)).
 
@@ -74,3 +76,6 @@ RandomX requires the use of multiple floating point rounding modes adjustable du
 
 The library is entirely compliant with reference implementation, and all components been tested properly ([tests](tests), [harness](tests/harness.c), [harness wrapper](tests/harness.ts)). Reaching compliance was done by single stepping the virtual machine and diffing the state with the reference implementation ([breakpoint function](src/vm/vm.c), [JIT instrumentation](src/jit/jit_vm_inst.c)).
 
+Below is a high level overview of how RandomX works, annotated with the specification headings.
+
+![RandomX high level overview](media/randomx_overview.png)

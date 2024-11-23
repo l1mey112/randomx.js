@@ -1,6 +1,6 @@
 # RandomX.js
 
-[RandomX.js](https://github.com/l1mey112/randomx.js) ([NPM](https://www.npmjs.com/package/randomx.js)) | [RandomWOW.js](https://github.com/l1mey112/randomx.js/tree/randomwow) ([NPM](https://www.npmjs.com/package/randomwow.js))
+[RandomX.js](https://github.com/l1mey112/randomx.js) ([NPM](https://www.npmjs.com/package/randomx.js)) | [RandomWOW.js](https://github.com/l1mey112/randomx.js) ([NPM](https://www.npmjs.com/package/randomwow.js))
 
 **RandomX.js is an implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.** This package is part of a monorepo, containing NPM packages [RandomX.js](https://www.npmjs.com/package/randomx.js) and [RandomWOW.js](https://www.npmjs.com/package/randomwow.js).
 
