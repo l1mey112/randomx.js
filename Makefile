@@ -50,7 +50,7 @@ LDFLAGS = -Wl,--no-entry -Wl,-z,stack-size=8192
 CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(IFLAGS) \
 	-msimd128 -mbulk-memory
 
-RXFLAGS = -DWASM_VM_PAGES=$(shell scripts/memorypages.ts )
+RXFLAGS = -DWASM_VM_PAGES=$(shell scripts/memorypages.ts)
 
 # main entrypoints
 all: pkg-randomx.js/dataset.wasm pkg-randomwow.js/dataset.wasm pkg-xmr-rx-webminer/dataset.wasm pkg-randomx.js/vm.wasm pkg-randomwow.js/vm.wasm pkg-xmr-rx-webminer/vm.wasm $(WAT_WASM_FILES) \

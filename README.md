@@ -79,3 +79,14 @@ The library is entirely compliant with reference implementation, and all compone
 Below is a high level overview of how RandomX works, annotated with the specification headings.
 
 ![RandomX high level overview](media/randomx_overview.png)
+
+# Build
+
+Will need `make`, `wabt`, `binaryen`, a decent version of `clang` (support for WASM toolchain), `tcc` for building a testing file, `bun` for running all the build scripts, and `node` for running the examples. Good luck.
+
+```sh
+bun i
+#make -j$(nproc)
+scripts/build.ts # calls into make and does everything else
+node examples/randomx.js
+```

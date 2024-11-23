@@ -126,8 +126,6 @@ export const program_vm = (data: Uint8Array) => {
 	const ptr = module.program_VM(data.length)
 	const dv = new DataView(module.memory.buffer, ptr)
 
-	// DataView defaulting to big-endian is a fucking crime
-
 	return {
 		r: new BigUint64Array(module.memory.buffer, ptr + 0, 8),
 		f: new Float64Array(module.memory.buffer, ptr + 64, 8),
