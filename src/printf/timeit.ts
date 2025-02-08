@@ -14,9 +14,18 @@ export function timeit(memory: WebAssembly.Memory) {
 		return new TextDecoder().decode(buf.subarray(ptr, p))
 	}
 
-	function _timeit(ptr: number, finished: number) {
+	function _timeit(ptr: number, finished: number | boolean): void
+	function _timeit(str: string, finished: number | boolean): void
+
+	function _timeit(ptr: number | string, finished: number | boolean): void {
+		let name: string
+		if (typeof ptr === 'string') {
+			name = ptr
+		} else {
+			name = tos(ptr)
+		}
+		
 		const now = performance.now()
-		const name = tos(ptr)
 	
 		if (!finished) {
 			timed.set(name, now)
@@ -39,9 +48,16 @@ export function timeit(memory: WebAssembly.Memory) {
 
 	function totals() {
 		let total = timed_completely.reduce((acc, [, time]) => acc + time, 0)
-		for (const [name, time] of timed_completely) {
+		/* for (const [name, time] of timed_completely) {
 			console.log(`${name} ${time.toFixed(1)}ms ${(time / total * 100).toFixed(1)}%`)
+		} */
+		// create table
+		const table: any[] = []
+		for (const [name, time] of timed_completely) {
+			table.push({ name, time: +time.toFixed(1), percent: (time / total * 100).toFixed(1) + '%' })
 		}
+
+		console.table(table)
 	}
 
 	return {

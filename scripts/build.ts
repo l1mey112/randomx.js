@@ -9,10 +9,13 @@ import path from 'node:path'
 // 1: single step VM by breakpoint (with printf)
 // 2: performance counters (with printf)
 const INSTRUMENT = parseInt(process.env.INSTRUMENT || '0') || 0
-const k = await $`INSTRUMENT=${INSTRUMENT} make -j$(nproc)`.nothrow() // make all
 
-if (k.exitCode !== 0) {
-	process.exit(k.exitCode)
+if (!process.env.NOMAKE) {
+	const k = await $`INSTRUMENT=${INSTRUMENT} make -j$(nproc)`.nothrow() // make all
+
+	if (k.exitCode !== 0) {
+		process.exit(k.exitCode)
+	}
 }
 
 /* const BASEPATHS = [
@@ -24,7 +27,7 @@ if (k.exitCode !== 0) {
 const BASEPATHS = {
 	'pkg-randomx.js': ['index.ts'],
 	'pkg-randomwow.js': ['index.ts'],
-	'pkg-xmr-rx-webminer': ['index.ts'],
+	//'pkg-xmr-rx-webminer': ['index.ts'],
 }
 
 async function compile_for(PATH: string, INDICES: string[]) {

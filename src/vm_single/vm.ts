@@ -97,14 +97,21 @@ export function randomx_create_vm(cache: RxCache | RxCacheHandle) {
 			if (jit_size === 0) {
 				break
 			}
+			if (INSTRUMENT == 2) {
+				the_timeit.timeit('wasm compilation', false)
+			}
 			const jit_wm = new WebAssembly.Module(scratch.subarray(0, jit_size))
 			const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)
+			if (INSTRUMENT == 2) {
+				the_timeit.timeit('wasm compilation', true)
+			}
 			const jit_exports = jit_wi.exports as { d: () => void }
 			jit_exports.d()
 		}
 
 		if (INSTRUMENT == 2) {
 			the_timeit.timeit_totals()
+			the_timeit.timeit_init()
 		}
 	}
 
