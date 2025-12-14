@@ -18,6 +18,11 @@ console.log(randomx.calculate_hash('hello world')) // Uint8Array
 
 > [RandomX](https://github.com/tevador/RandomX) is a proof-of-work (PoW) algorithm that is optimized for general-purpose CPUs. RandomX uses random code execution (hence the name) together with several memory-hard techniques to minimize the efficiency advantage of specialized hardware.
 
+I recently presented a talk about RandomX and the internals of this library! Go watch it:
+
+> [![RandomX.js](https://i.ytimg.com/vi_webp/gmAgvHaw9w4/maxresdefault.webp)](https://www.youtube.com/watch?v=gmAgvHaw9w4)
+> [Zero to RandomX.js: Bringing Webmining Back From The Grave - Linux Society UNSW 2025](https://www.youtube.com/watch?v=gmAgvHaw9w4)
+
 ```bash
 scripts/build.ts
 node examples/randomx.js
