@@ -1,0 +1,27 @@
+{
+  "name": "randomx.js",
+  "version": "0.1.3",
+  "author": "l-m.dev",
+  "main": "./dist/cjs/index.js",
+  "exports": {
+    "require": "./dist/cjs/index.js",
+    "import": "./dist/esm/index.mjs"
+  },
+  "types": "./dist/index.d.ts",
+  "description": "RandomX.js is a zero-dependency implementation of the ubiquitous Monero POW algorithm RandomX in JavaScript.",
+  "files": [
+    "./dist"
+  ],
+  "bugs": {
+    "url": "https://github.com/l1mey112/randomx.js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/l1mey112/randomx.js.git"
+  },
+  "engines": {
+    "node": ">=17"
+  },
+  "keywords": ["monero", "randomx", "pow", "hash", "wasm", "webassembly", "cryptocurrency", "crypto", "mining"],
+  "license": "BSD-3-Clause"
+}

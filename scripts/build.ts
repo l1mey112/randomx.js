@@ -27,6 +27,8 @@ if (!process.env.NOMAKE) {
 const BASEPATHS = {
 	'pkg-randomx.js': ['index.ts'],
 	'pkg-randomwow.js': ['index.ts'],
+	'pkg-randomx.js-shared': ['index.ts'],
+	'pkg-randomwow.js-shared': ['index.ts'],
 	//'pkg-xmr-rx-webminer': ['index.ts'],
 }
 
@@ -54,11 +56,13 @@ async function compile_for(PATH: string, INDICES: string[]) {
 
 			build.onLoad({ filter: /.*/, namespace: 'wasm-stub' }, async (args) => {
 				const wasm_pages = await $`scripts/memorypages.ts ${PATH}/${args.path}`.text()
+				const is_shared = await $`scripts/sharedmemory.ts ${PATH}/${args.path} '\x03env\x06memory'`.text()
 
 				return {
 					contents: `import wasm from "${args.path}"
 						export default wasm
-						export const wasm_pages = ${wasm_pages}`,
+						export const wasm_pages = ${wasm_pages}
+						export const is_shared = ${is_shared}`,
 					loader: 'ts',
 				}
 			})

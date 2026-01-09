@@ -53,7 +53,8 @@ CFLAGS = --target=wasm32 -nostdlib -fno-builtin $(IFLAGS) \
 RXFLAGS = -DWASM_VM_PAGES=$(shell scripts/memorypages.ts)
 
 # main entrypoints
-all: pkg-randomx.js/dataset.wasm pkg-randomwow.js/dataset.wasm pkg-xmr-rx-webminer/dataset.wasm pkg-randomx.js/vm.wasm pkg-randomwow.js/vm.wasm pkg-xmr-rx-webminer/vm.wasm $(WAT_WASM_FILES) \
+all: pkg-randomx.js/dataset.wasm pkg-randomx.js-shared/dataset.wasm pkg-randomwow.js/dataset.wasm pkg-randomwow.js-shared/dataset.wasm \
+	pkg-randomx.js/vm.wasm pkg-randomx.js-shared/vm.wasm pkg-randomwow.js/vm.wasm pkg-randomwow.js-shared/vm.wasm $(WAT_WASM_FILES) \
 	tests/rx_harness.wasm tests/semifloat/semifloat
 
 .PHONY: clean
@@ -98,6 +99,10 @@ ifeq ($(INSTRUMENT),0)
 	wasm-opt -all -O4 -Oz $@ -o $@
 endif
 
+pkg-randomx.js-shared/dataset.wasm: pkg-randomx.js/dataset.wasm
+	cp $< $@
+	scripts/sharedpatch.ts $@ '\x03env\x06memory'
+
 pkg-randomwow.js/dataset.wasm: $(DATASET_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
 		-Wl,--import-memory \
@@ -111,8 +116,9 @@ ifeq ($(INSTRUMENT),0)
 	wasm-opt -all -O4 -Oz $@ -o $@
 endif
 
-pkg-xmr-rx-webminer/dataset.wasm: pkg-randomx.js/dataset.wasm
+pkg-randomwow.js-shared/dataset.wasm: pkg-randomwow.js/dataset.wasm
 	cp $< $@
+	scripts/sharedpatch.ts $@ '\x03env\x06memory'
 
 pkg-randomx.js/vm.wasm: $(VM_SINGLE_RX_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
@@ -127,6 +133,9 @@ ifeq ($(INSTRUMENT),0)
 	wasm-opt -all -O4 -Oz $@ -o $@
 endif
 
+pkg-randomx.js-shared/vm.wasm: pkg-randomx.js/vm.wasm
+	cp $< $@
+
 pkg-randomwow.js/vm.wasm: $(VM_SINGLE_WOW_C_SOURCES) $(H_SOURCES)
 	clang -O3 $(CFLAGS) $(LDFLAGS) \
 		-Wl,--import-memory \
@@ -140,15 +149,5 @@ ifeq ($(INSTRUMENT),0)
 	wasm-opt -all -O4 -Oz $@ -o $@
 endif
 
-pkg-xmr-rx-webminer/vm.wasm: $(VM_MINER_RX_C_SOURCES) $(H_SOURCES)
-	clang -O3 $(CFLAGS) $(LDFLAGS) \
-		-Wl,--import-memory \
-		-o $@ $(VM_MINER_RX_C_SOURCES) \
-		$(shell scripts/deflist.ts pkg-randomx.js/configuration.toml)
-
-	scripts/nogrowablepatch.ts $@ '\x03env\x06memory'
-
-ifeq ($(INSTRUMENT),0)
-	wasm-strip $@
-	wasm-opt -all -O4 -Oz $@ -o $@
-endif
+pkg-randomwow.js-shared/vm.wasm: pkg-randomwow.js/vm.wasm
+	cp $< $@

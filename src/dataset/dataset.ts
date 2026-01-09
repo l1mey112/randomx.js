@@ -1,8 +1,8 @@
 import { env_npf_putc } from '../printf/printf'
-import { adjust_imported_shared_memory } from '../wasm_prefix'
+import { adjust_imported_shared_memory, check_imported_shared_memory } from '../wasm_prefix'
 
 // @ts-ignore
-import wasm, { wasm_pages } from 'dataset.wasm'
+import wasm, { wasm_pages, is_shared as dataset_is_shared } from 'dataset.wasm'
 
 // @ts-ignore
 import vm_wasm from 'vm.wasm'
@@ -71,12 +71,9 @@ export class RxCache {
 	}
 }
 
-function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] {
-	// we cannot cache this module because we need to adjust the memory import
-	adjust_imported_shared_memory(wasm, '\x03env\x06memory', is_shared) // patch in place
-
-	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: is_shared })
-	const wm = new WebAssembly.Module(wasm)
+function create_module(): [WebAssembly.Memory, DatasetModule] {
+	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: dataset_is_shared })
+	const wm = new WebAssembly.Module(wasm as any)
 
 	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {
 		env: {
@@ -99,8 +96,8 @@ function create_module(is_shared: boolean): [WebAssembly.Memory, DatasetModule] 
 	return [memory, exports]
 }
 
-function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule, is_shared: boolean): RxCache {
-	const jit_begin = exports.c(wasm_pages, is_shared)
+function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): RxCache {
+	const jit_begin = exports.c(wasm_pages, dataset_is_shared)
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
 
@@ -108,13 +105,19 @@ function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetM
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
 	if (!_vm_handle) {
-		_vm_handle = new WebAssembly.Module(vm_wasm)
+		_vm_handle = new WebAssembly.Module(vm_wasm as any)
 	}
 
 	return new RxCache(memory, new WebAssembly.Module(jit_buffer), _vm_handle, exports)
 }
 
-type RxCacheOptions = { shared?: boolean }
+type RxCacheOptions = {
+	/**
+	* @deprecated This has no effect, now that there are separate libraries to actually do this.
+	* 	          Use 'randomx.js-shared' or 'randomwow.js-shared' for shared memory.
+	*/
+	shared?: boolean
+}
 
 export function randomx_init_cache(K: string | Uint8Array | undefined | null, cache: RxCache): RxCache
 export function randomx_init_cache(K?: string | Uint8Array | undefined | null, conf?: RxCacheOptions | undefined | null): RxCache
@@ -131,12 +134,16 @@ export function randomx_init_cache(K?: string | Uint8Array | undefined | null, c
 
 	if (conf instanceof RxCache) {
 		const cache = conf
-		return initialise(K, cache.memory, cache.exports, cache.shared)
+		return initialise(K, cache.memory, cache.exports)
 	}
 
-	const is_shared = !!conf?.shared
-	const [memory, exports] = create_module(is_shared)
-	return initialise(K, memory, exports, is_shared)
+	// is_shared has no effect, it's merely an assertion now
+	if (dataset_is_shared !== (conf?.shared ?? dataset_is_shared)) {
+		throw new Error(`Deprecated: 'shared' option has no effect, and is an assertion now (expected shared=${dataset_is_shared})`)
+	}
+	
+	const [memory, exports] = create_module()
+	return initialise(K, memory, exports)
 }
 
 export type RxSuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
