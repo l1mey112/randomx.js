@@ -1,4 +1,4 @@
-import { randomx_superscalarhash, RxCache, type RxCacheHandle } from '../dataset/dataset'
+import { RxCache, type RxCacheHandle } from '../dataset/dataset'
 import { jit_detect, machine_id, type JitFeature } from '../detect/detect'
 import { env_npf_putc } from '../printf/printf'
 import { timeit } from '../printf/timeit'
@@ -12,6 +12,23 @@ const _feature: JitFeature = jit_detect()
 
 export function randomx_machine_id() {
 	return machine_id(_feature)
+}
+
+type RxSuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+function randomx_superscalarhash(cache: RxCacheHandle): RxSuperscalarHash {
+	const wi = new WebAssembly.Instance(cache.thunk, {
+		e: {
+			m: cache.memory
+		}
+	})
+
+	type SuperscalarHashModule = {
+		d: RxSuperscalarHash
+	}
+
+	const exports = wi.exports as SuperscalarHashModule
+	return exports.d
 }
 
 // new virtual machine

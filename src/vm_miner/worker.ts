@@ -68,6 +68,23 @@ let job!: JobMessage
 
 declare var ENVIRONMENT: 'node' | 'browser'
 
+type RxSuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+function randomx_superscalarhash(cache: RxCacheHandle): RxSuperscalarHash {
+	const wi = new WebAssembly.Instance(cache.thunk, {
+		e: {
+			m: cache.memory
+		}
+	})
+
+	type SuperscalarHashModule = {
+		d: RxSuperscalarHash
+	}
+
+	const exports = wi.exports as SuperscalarHashModule
+	return exports.d
+}
+
 function message(e: any) {
 	const data: Message = (ENVIRONMENT === 'browser' ? e.data : e) as any
 

@@ -145,20 +145,3 @@ export function randomx_init_cache(K?: string | Uint8Array | undefined | null, c
 	const [memory, exports] = create_module()
 	return initialise(K, memory, exports)
 }
-
-export type RxSuperscalarHash = (item_index: bigint) => [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
-
-export function randomx_superscalarhash(cache: RxCache | RxCacheHandle): RxSuperscalarHash {
-	const wi = new WebAssembly.Instance(cache.thunk, {
-		e: {
-			m: cache.memory
-		}
-	})
-
-	type SuperscalarHashModule = {
-		d: RxSuperscalarHash
-	}
-
-	const exports = wi.exports as SuperscalarHashModule
-	return exports.d
-}
