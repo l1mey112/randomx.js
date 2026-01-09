@@ -19,7 +19,7 @@ export function jit_detect(): JitFeature {
 	}
 	
 	try {
-		const wm = new WebAssembly.Module(fma)
+		const wm = new WebAssembly.Module(fma as any)
 		const wi = new WebAssembly.Instance(wm)
 
 		// TODO: FMA is disabled in the JIT as it doesn't work in all cases
