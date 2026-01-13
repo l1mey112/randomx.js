@@ -167,7 +167,7 @@ function iterate() {
 				result: scratch.slice(0, 32) // R = Hash256()
 			}
 
-			console.log(`fonud after ${wi_exports.h()} hashes, nonce ${result.nonce} result ${scratch.slice(0, 32)}`)
+			console.log(`found after ${wi_exports.h()} hashes, nonce ${result.nonce} result ${scratch.slice(0, 32)}`)
 
 			postMessage(result)
 			is_mining = false
@@ -175,7 +175,7 @@ function iterate() {
 		}
 
 		// iterate virtual machine
-		const jit_wm = new WebAssembly.Module(scratch.subarray(0, jit_size))
+		const jit_wm = new WebAssembly.Module(scratch.subarray(0, jit_size) as any)
 		const jit_wi = new WebAssembly.Instance(jit_wm, jit_imports)
 		const jit_exports = jit_wi.exports as { d: () => void }
 		jit_exports.d()

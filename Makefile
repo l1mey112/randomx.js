@@ -59,7 +59,7 @@ all: pkg-randomx.js/dataset.wasm pkg-randomx.js-shared/dataset.wasm pkg-randomwo
 
 .PHONY: clean
 clean:
-	git clean -Xdf
+	git clean -Xdf -e '!node_modules' -e '!node_modules/**'
 
 %.wasm: %.wat
 	wat2wasm --enable-all $< -o $@

@@ -89,7 +89,7 @@ Below is a high level overview of how RandomX works, annotated with the specific
 
 # Build
 
-Will need `make`, `wabt`, `binaryen`, a decent version of `clang` (support for WASM toolchain), `tcc` for building a testing file, `bun` for running all the build scripts, and `node` for running the examples. Good luck.
+Will need `make`, `wabt`, `binaryen`, a decent version of `clang` (support for WASM toolchain), `bun` for running all the build scripts, and `node` for running the examples. Good luck.
 
 ```sh
 bun i
