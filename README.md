@@ -26,7 +26,7 @@ I recently presented a talk about RandomX and the internals of this library! Go 
 ```bash
 scripts/build.ts
 node examples/randomx.js
-# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+!fma] Node.js/v22.9.0 (linux x64)
+# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+fma] Node.js/v22.9.0 (linux x64)
 # cache construction time 535.8 ms
 # average hashrate: 22.0 H/s
 
@@ -36,7 +36,7 @@ bun examples/randomx.js
 # average hashrate: 14.1 H/s
 
 node examples/randomx_threaded.js
-# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+!fma] Node.js/v22.9.0 (linux x64)
+# machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+fma] Node.js/v22.9.0 (linux x64)
 # initialising thread 0..15
 # average hashrate: 208.0 H/s
 

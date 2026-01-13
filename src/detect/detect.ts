@@ -39,7 +39,7 @@ function jit_feature_stringify(feature: JitFeature): string[] {
 	}
 
 	if (feature & JIT_FMA) {
-		s.push('!fma')
+		s.push('fma')
 	}
 
 	return s
@@ -49,7 +49,7 @@ function jit_feature_stringify(feature: JitFeature): string[] {
 // Bun/1.1.29 (linux x64) -------------------------------------------------- AMD Ryzen 7 3800X 8-Core Processor
 // Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0 -- Generic 16-Thread CPU
 
-// Generic 16-Thread CPU [rx/0+relaxed-simd+!fma] Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0
+// Generic 16-Thread CPU [rx/0+relaxed-simd+fma] Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0
 
 // ignore this retardation - trying to get imports reliably per platform on esbuild is stupid
 declare var ENVIRONMENT: 'node' | 'browser'
