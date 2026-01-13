@@ -27,28 +27,28 @@ I recently presented a talk about RandomX and the internals of this library! Go 
 scripts/build.ts
 node examples/randomx.js
 # machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+fma] Node.js/v22.9.0 (linux x64)
-# cache construction time 535.8 ms
-# average hashrate: 22.0 H/s
+# cache construction time 599.0 ms
+# average hashrate: 26.3 H/s
 
 bun examples/randomx.js
 # machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0] Bun/1.1.29 (linux x64)
-# cache construction time 1071.8 ms
-# average hashrate: 14.1 H/s
+# cache construction time 793.8 ms
+# average hashrate: 15.2 H/s
 
 node examples/randomx_threaded.js
 # machine id: AMD Ryzen 7 3800X 8-Core Processor [rx/0+relaxed-simd+fma] Node.js/v22.9.0 (linux x64)
 # initialising thread 0..15
-# average hashrate: 208.0 H/s
+# average hashrate: 251.0 H/s
 
 node examples/mining/server.js
 # server running at http://localhost:8080/
-# machine id: Generic 16-Thread CPU [rx/0] Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0
-# average hashrate: 137.0 H/s
+# machine id: Generic 16-Thread CPU [rx/0+relaxed-simd+fma] Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36
+# average hashrate: 241.0 H/s
 
 node -v; bun -v; chromium --version
-# v22.9.0
-# 1.1.29
-# Chromium 128.0.6613.119 Arch Linux
+# v25.2.1
+# 1.2.16
+# Chromium 137.0.7151.68 Arch Linux
 ```
 
 Hashrate was speculated to be 1 H/s per thread, this beats it at still a pitiful 20 H/s. On the same machine, 100 H/s per thread is achieved when mining in light/verification mode, so 5x slower ain't that bad. Mining with an initialised dataset (2 GiB allocation) is not supported (though easy to implement), no one on earth would give a webpage multiple gigabytes of memory. **Light/verification mode only, ~~transparent threading is enabled by allocating the cache with the `shared` parameter.~~**

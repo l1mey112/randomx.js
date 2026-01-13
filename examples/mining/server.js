@@ -27,7 +27,7 @@ const server = http.createServer((request, response) => {
 			'Cross-Origin-Opener-Policy': 'same-origin',
 			'Cross-Origin-Embedder-Policy': 'require-corp',
 		})
-		response.write(fs.readFileSync(path.resolve(__dirname, '../../pkg-randomx.js/dist/web/index.js')))
+		response.write(fs.readFileSync(path.resolve(__dirname, '../../pkg-randomx.js-shared/dist/web/index.js')))
 		break
 	default:
 		response.writeHead(404, {
