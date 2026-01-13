@@ -70,13 +70,13 @@ src/jit/stubs/%.wasm: src/jit/stubs/%.c
 src/jit/stubs/%.h: src/jit/stubs/%.wasm
 	./scripts/stubgen.ts $< > $@
 
-# FP heap is so fucking large that it only makes sense to compile with TCC
-# don't even bother with optimisations on
 tests/semifloat/the_randomx_fp_heap.o: tests/semifloat/the_randomx_fp_heap.c tests/semifloat/the_randomx_fp_heap.h
-	tcc -c -o $@ tests/semifloat/the_randomx_fp_heap.c
-# ensure separate compilation units, NO LTO/INLINING
+	clang -w -c -o $@ tests/semifloat/the_randomx_fp_heap.c
+
+# no inlining
 tests/semifloat/semifloat_stub.o: src/jit/stubs/semifloat.c
 	clang -march=native -fno-lto $(IFLAGS) -O3 -c -o $@ $<
+
 tests/semifloat/semifloat: tests/semifloat/semifloat_test.c tests/semifloat/semifloat_stub.o tests/semifloat/the_randomx_fp_heap.o
 	clang -march=native -fno-lto -ffp-model=strict $(IFLAGS) -lm -Og -ggdb -o $@ \
 		tests/semifloat/semifloat_test.c tests/semifloat/semifloat_stub.o tests/semifloat/the_randomx_fp_heap.o

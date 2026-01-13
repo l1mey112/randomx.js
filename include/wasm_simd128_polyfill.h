@@ -17487,7 +17487,7 @@ simde_wasm_f64x2_relaxed_madd (simde_v128_t a, simde_v128_t b, simde_v128_t c) {
     #elif defined(SIMDE_ARM_NEON_A64V8_NATIVE)
       r_.neon_f64 = vfmaq_f64(a_.neon_f64, c_.neon_f64, b_.neon_f64);
     #elif defined(SIMDE_X86_FMA_NATIVE)
-      r_.sse_m128d = _mm_fmadd_pd(c_.sse_m128d, b_.sse_m128d, a_.sse_m128d);
+      r_.sse_m128d = _mm_fmadd_pd(a_.sse_m128d, b_.sse_m128d, c_.sse_m128d);
     //#elif defined(SIMDE_VECTOR_SUBSCRIPT)
     //  r_.f64 = a_.f64 + (b_.f64 * c_.f64);
     #else

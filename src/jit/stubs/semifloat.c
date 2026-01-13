@@ -161,7 +161,7 @@ static inline v128_t mul_residue(v128_t a, v128_t b, v128_t c) {
 }
 
 static inline v128_t mul_residue_fma(v128_t a, v128_t b, v128_t c) {
-	return wasm_f64x2_relaxed_madd(wasm_f64x2_neg(c), b, a); // a*b - c
+	return wasm_f64x2_relaxed_madd(a, b, wasm_f64x2_neg(c)); // a*b - c
 }
 
 // reference:

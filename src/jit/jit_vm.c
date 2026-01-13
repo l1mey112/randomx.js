@@ -752,7 +752,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 		WASM_U32_WITH_STUB(STUB_FMUL_0);
 
-		if (0 /* jit_feature & JIT_FMA */) {
+		if (jit_feature & JIT_FMA) {
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FMUL_FMA_3);
@@ -764,7 +764,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 		WASM_U32_WITH_STUB(STUB_FDIV_0);
 
-		if (0 /* jit_feature & JIT_FMA */) {
+		if (jit_feature & JIT_FMA) {
 			WASM_U32_WITH_STUB(STUB_FDIV_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FDIV_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FDIV_FMA_3);
@@ -776,7 +776,7 @@ uint32_t jit_vm(rx_vm_t *VM, rx_program_t *P, uint8_t *scratchpad, uint8_t *buf)
 
 		WASM_U32_WITH_STUB(STUB_FSQRT_0);
 
-		if (0 /* jit_feature & JIT_FMA */) {
+		if (jit_feature & JIT_FMA) {
 			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_1);
 			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_2);
 			WASM_U32_WITH_STUB(STUB_FSQRT_FMA_3);
