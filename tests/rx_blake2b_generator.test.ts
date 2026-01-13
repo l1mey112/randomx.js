@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test'
+import { test, expect } from 'vitest'
 import { blake2b_generator, hash512 } from './rx_harness'
 import { random } from 'nanoid'
 

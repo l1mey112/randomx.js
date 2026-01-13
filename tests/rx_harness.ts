@@ -1,7 +1,9 @@
+import path from 'node:path'
+import fs from 'node:fs'
 import { RANDOMX_ARGON_MEMORY } from '../include/configuration'
 import { env_npf_putc } from '../src/printf/printf'
-import wasm from './rx_harness.wasm'
 
+const wasm = fs.readFileSync(path.join(import.meta.dirname, './rx_harness.wasm'))
 const SCRATCH_SIZE = 1024 * 16
 
 type Module = {

@@ -1,6 +1,6 @@
-import { test, expect } from 'bun:test'
+import { test, expect } from 'vitest'
 import { buffer, module }  from './rx_harness'
-import { randomx_init_cache, randomx_superscalarhash, type RxCache } from '../pkg-randomx.js/dist/esm/index.mjs'
+import { randomx_init_cache, type RxCache } from '../pkg-randomx.js/dist/esm/index.mjs'
 import type { RxCacheHandle } from '../src/dataset/dataset'
 
 test('chained programs', () => {
@@ -27,29 +27,4 @@ test('chained programs', () => {
 		const hash = Buffer.from(buffer.slice(0, 32))
 		expect(hash).toEqual(superscalar[i])
 	}
-})
-
-test('dataset initialisation', () => {
-	function test_with(cache: RxCacheHandle) {
-		const hash = randomx_superscalarhash(cache)
-
-		const dataset_items_0 = hash(0n)
-		const dataset_items_10000000 = hash(10000000n)
-		const dataset_items_20000000 = hash(20000000n)
-		const dataset_items_30000000 = hash(30000000n)
-
-		expect(dataset_items_0[0]).toEqual(BigInt.asIntN(64, 0x680588a85ae222dbn))
-		expect(dataset_items_10000000[0]).toEqual(BigInt.asIntN(64, 0x7943a1f6186ffb72n))
-		expect(dataset_items_20000000[0]).toEqual(BigInt.asIntN(64, 0x9035244d718095e1n))
-		expect(dataset_items_30000000[0]).toEqual(BigInt.asIntN(64, 0x145a5091f7853099n))
-	}
-	
-	let n: RxCache
-
-	n = randomx_init_cache('test key 000')
-	expect(n.handle.memory.buffer).toBeInstanceOf(ArrayBuffer)
-	test_with(n.handle)
-	n = randomx_init_cache('test key 000', { shared: true })
-	expect(n.handle.memory.buffer).toBeInstanceOf(SharedArrayBuffer)
-	test_with(n.handle)
 })

@@ -7,7 +7,8 @@
     "dts-bundle-generator": "^9.5.1",
     "esbuild": "^0.23.1",
     "nanoid": "^5.0.7",
-    "threads": "^1.7.0"
+    "threads": "^1.7.0",
+    "vitest": "^4.0.17"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -15,11 +16,15 @@
   "license": "BSD-3-Clause",
   "scripts": {
     "build": "bun scripts/build.ts",
-    "test": "bun test",
+    "test-bun": "bunx --bun vitest",
+    "test-node": "npx vitest",
     "publish-all": "npm publish --workspaces"
   },
   "workspaces": [
     "pkg-randomx.js",
     "pkg-randomwow.js"
-  ]
+  ],
+  "dependencies": {
+    "blakejs": "^1.2.1"
+  }
 }

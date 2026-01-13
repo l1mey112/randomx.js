@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test'
+import { test, expect } from 'vitest'
 import { program_vm } from "./rx_harness"
 
 // this tests blake2b, scratchpad initialisation (fillAes1Rx4),

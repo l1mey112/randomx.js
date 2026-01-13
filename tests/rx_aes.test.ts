@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test'
+import { test, expect } from 'vitest'
 import { fillAes1Rx4, soft_aesdec, soft_aesenc }  from './rx_harness'
 
 test('fillAes1Rx4', () => {

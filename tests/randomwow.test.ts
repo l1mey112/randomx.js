@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test'
+import { test, expect } from 'vitest'
 import { randomx_create_vm, randomx_init_cache } from '../pkg-randomwow.js/dist/esm/index.mjs'
 
 test('test key 000', async () => {

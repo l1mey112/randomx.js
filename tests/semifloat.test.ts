@@ -1,8 +1,6 @@
-import { test, expect } from 'bun:test'
-import { $ } from 'bun'
+import { test, expect } from 'vitest'
+import { execSync } from 'node:child_process'
 
 test('semifloat', async () => {
-	const p = await $`${import.meta.dirname}/semifloat/semifloat`.nothrow()
-
-	expect(p.exitCode).toBe(0)
+	expect(() => execSync(`${import.meta.dirname}/semifloat/semifloat`)).not.toThrow()
 })
