@@ -11,7 +11,7 @@ declare var INSTRUMENT: number
 
 let _vm_handle: WebAssembly.Module | null = null
 
-type DatasetModule = {
+export type DatasetModule = {
 	c(pages: number, is_shared: boolean): number
 	K(key_length: number): number
 }
@@ -71,8 +71,7 @@ export class RxCache {
 	}
 }
 
-function create_module(): [WebAssembly.Memory, DatasetModule] {
-	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: dataset_is_shared })
+/* export function internal_create_instance(memory: WebAssembly.Memory, vm_handle: WebAssembly.Module): DatasetModule {
 	const wm = new WebAssembly.Module(wasm as any)
 
 	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {
@@ -93,10 +92,34 @@ function create_module(): [WebAssembly.Memory, DatasetModule] {
 	const wi = new WebAssembly.Instance(wm, wi_imports as Record<string, any>)
 
 	const exports = wi.exports as DatasetModule
-	return [memory, exports]
+	return exports
+}
+ */
+export function internal_create_module(memory: WebAssembly.Memory): DatasetModule {
+	const wm = new WebAssembly.Module(wasm as any)
+
+	const wi_imports: Record<string, Record<string, WebAssembly.ImportValue>> = {
+		env: {
+			memory
+		}
+	}
+
+	if (INSTRUMENT) {
+		wi_imports.e = {}
+		wi_imports.e.ch = env_npf_putc
+
+		if (INSTRUMENT == 2) {
+			wi_imports.e.b = function (){}
+		}
+	}
+
+	const wi = new WebAssembly.Instance(wm, wi_imports as Record<string, any>)
+
+	const exports = wi.exports as DatasetModule
+	return exports
 }
 
-function initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): RxCache {
+export function internal_initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): RxCache {
 	const jit_begin = exports.c(wasm_pages, dataset_is_shared)
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
 	key_buffer.set(K)
@@ -134,7 +157,7 @@ export function randomx_init_cache(K?: string | Uint8Array | undefined | null, c
 
 	if (conf instanceof RxCache) {
 		const cache = conf
-		return initialise(K, cache.memory, cache.exports)
+		return internal_initialise(K, cache.memory, cache.exports)
 	}
 
 	// is_shared has no effect, it's merely an assertion now
@@ -142,6 +165,7 @@ export function randomx_init_cache(K?: string | Uint8Array | undefined | null, c
 		throw new Error(`Deprecated: 'shared' option has no effect, and is an assertion now (expected shared=${dataset_is_shared})`)
 	}
 	
-	const [memory, exports] = create_module()
-	return initialise(K, memory, exports)
+	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages, shared: dataset_is_shared })
+	const exports = internal_create_module(memory)
+	return internal_initialise(K, memory, exports)
 }

@@ -1,1 +1,1 @@
-import '../src/host_miner/miner.ts'
+import '../src/vm_miner/miner_old.ts'
