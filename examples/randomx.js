@@ -23,11 +23,8 @@ const avg = () => samples.reduce((a, b) => a + b) / samples.length
 let i = 0
 while (i < 100) {
 	const time_now = performance.now()
-	const hash = randomx.calculate_hex_hash('Lorem ipsum dolor sit amet')
+	randomx.calculate_hex_hash('Lorem ipsum dolor sit amet' + i)
 	const time = performance.now() - time_now
-	if (hash !== '300a0adb47603dedb42228ccb2b211104f4da45af709cd7547cd049e9489c969') {
-		console.error('hash mismatch', hash)
-	}
 	samples.push(time)
 
 	if (i % 4 === 0) {

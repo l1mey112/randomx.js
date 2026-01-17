@@ -10,10 +10,6 @@ if (isMainThread) {
 	let hashes = 0
 
 	function onmessage(hash) {
-		if (hash !== '300a0adb47603dedb42228ccb2b211104f4da45af709cd7547cd049e9489c969') {
-			console.error('hash mismatch', hash)
-		}
-
 		hashes++
 	}
 
@@ -38,9 +34,10 @@ if (isMainThread) {
 } else {
 	parentPort.on('message', (cache) => {
 		const randomx = randomx_create_vm(cache)
+		let nonce = 0
 
 		while (true) {
-			const hash = randomx.calculate_hex_hash('Lorem ipsum dolor sit amet')
+			const hash = randomx.calculate_hex_hash('Lorem ipsum dolor sit amet' + nonce++)
 			parentPort.postMessage(hash)
 		}
 	})
