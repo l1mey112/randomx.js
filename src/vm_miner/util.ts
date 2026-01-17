@@ -1,5 +1,7 @@
 import type { JitFeature } from "../detect/detect"
 
+export const bc = new BroadcastChannel('12313131 miner channel')
+
 export type Config = {
 	target_threads?: number
 }
@@ -53,17 +55,6 @@ export type Job = {
 	seed_hash: string
 }
 
-// New worker is created from nothing
-export type WorkerMessageInit = {
-	type: 'init'
-
-	jit_feature: JitFeature
-
-	// backing SharedArrayBuffer allocated once, the thunk/ssh will be sent later
-	cache: WebAssembly.Memory
-	vm: WebAssembly.Module
-}
-
 // It is assumed that when 'new_cache' comes in, the main worker would have
 // already finished overwriting the caches memory. Hence, for a moment between
 // the writes and the 'new_cache', the worker is wasting cycles mining on
@@ -103,34 +94,24 @@ export type WorkerMessageMine = {
 export type WorkerPong = {
 	type: 'pong'
 
-	// If you're already initialised, give main the cache back.
-	cache?: WebAssembly.Memory | null
-
-	// this is a random string, one per worker initialised when they're created
 	miner_id: string
 
 	stats: {
-		job_id?: string | null | undefined
 		hashes_per_second: number
 		hashes_total: number
 	}
 }
 
-// for manual killing. a worker will already die
-// if it doesn't exist in the workers list on 'mine'
-export type WorkerDie = {
-	type: 'die'
-	miner_id: string
-}
-
 // workers initially start paused until they get more work.
 // pause them, and they are unpaused when they get 'mine'
-export type WorkerGlobalPause = {
-	type: 'pause'
+export type WorkerGlobalDispose = {
+	type: 'dispose'
 }
 
 export type WorkerMessageResult = {
 	type: 'result'
+
+	miner_id: string
 
 	job_id: string
 	nonce: number
@@ -138,12 +119,22 @@ export type WorkerMessageResult = {
 }
 
 export type ToWorker =
-	| WorkerMessageInit
 	| WorkerMessageNewCache
 	| WorkerMessageMine
-	| WorkerDie
-	| WorkerGlobalPause
+	| WorkerGlobalDispose
 
 export type FromWorker =
 	| WorkerMessageResult
 	| WorkerPong
+
+export type WorkerMessageInit = {
+	type: 'init'
+
+	// this is a random string, one per worker initialised when they're created
+	miner_id: string
+	jit_feature: JitFeature
+
+	// backing SharedArrayBuffer allocated once, the thunk/ssh will be sent later
+	cache: WebAssembly.Memory
+	vm: WebAssembly.Module
+}

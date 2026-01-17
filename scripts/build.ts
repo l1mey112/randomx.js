@@ -29,7 +29,6 @@ const BASEPATHS = {
 	'pkg-randomwow.js': ['index.ts'],
 	'pkg-randomx.js-shared': ['index.ts'],
 	'pkg-randomwow.js-shared': ['index.ts'],
-	//'pkg-xmr-rx-webminer': ['index.ts'],
 }
 
 async function compile_for(PATH: string, INDICES: string[]) {

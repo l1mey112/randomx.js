@@ -1,1 +1,0 @@
-import '../src/vm_miner/worker'

@@ -39,13 +39,12 @@ export function randomx_create_vm(cache: RxCache | RxCacheHandle) {
 		i(feature: JitFeature): number // returns scratch buffer
 		I(is_hex: boolean): void
 		H(data_length: number): number
-		R(): number // iterate virtual machine
+		Rs(): number // iterate virtual machine
 		// when INSTRUMENT
 		b(ic: number, pc: number, mx: number, ma: number, sp_addr0: number, sp_addr1: number): void
 	}
 
 	const SCRATCH_SIZE = 16 * 1024
-
 
 	let the_timeit: ReturnType<typeof timeit>
 	const memory = new WebAssembly.Memory({ initial: wasm_pages, maximum: wasm_pages })
@@ -110,7 +109,7 @@ export function randomx_create_vm(cache: RxCache | RxCacheHandle) {
 
 		let jit_size: number
 		while (1) {
-			jit_size = exports.R()
+			jit_size = exports.Rs()
 			if (jit_size === 0) {
 				break
 			}

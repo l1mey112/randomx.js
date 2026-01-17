@@ -1,13 +1,20 @@
-import { internal_create_module, internal_initialise, randomx_init_cache, RxCache, type DatasetModule, type RxCacheHandle } from '../dataset/dataset';
-import { hex2bin, hex2target, sleep, type Config, type FromWorker, type Job, type NonceSpace, type ToWorker, type WorkerMessageMine, type WorkerMessageNewCache, type WorkerPong } from './util';
+import { internal_create_module, internal_get_cached_vm_handle, internal_initialise, randomx_init_cache, RxCache, type DatasetModule, type RxCacheHandle } from '../dataset/dataset';
+import { bc, hex2bin, hex2target, sleep, type Config, type FromWorker, type Job, type NonceSpace, type ToWorker, type WorkerMessageInit, type WorkerMessageMine, type WorkerMessageNewCache, type WorkerPong } from './util';
+import { jit_detect } from '../detect/detect';
+import { nanoid } from 'nanoid';
 
 // @ts-ignore
-import WORKER_URL from 'url:./worker'
+import worker_url from 'url:./vm'
 
 // @ts-ignore
 import dataset_wasm, { wasm_pages as dataset_wasm_pages } from 'dataset.wasm'
 
-const bc = new BroadcastChannel('12313131 miner channel');
+declare var ENVIRONMENT: 'node' | 'browser'
+if (ENVIRONMENT !== 'browser') {
+	var Worker = require('worker_threads').Worker
+}
+
+const jit_feature = jit_detect()
 
 type MainState = {
 	cache_memory: WebAssembly.Memory
@@ -19,125 +26,44 @@ type MainState = {
 		rx_cache: RxCache
 	}
 
-	workers: Map<string, WorkerPong>
+	workers: Map<string, WorkerPong | null>
 }
 
-async function main_watch_workers(workers: Map<string, WorkerPong>, st: MainState): Promise<void>
-async function main_watch_workers(workers: Map<string, WorkerPong>): Promise<WebAssembly.Memory>
-
-// if `st` is empty, this is an initial sweep and won't ignore workers that have differing caches
-async function main_watch_workers(workers: Map<string, WorkerPong>, st?: MainState): Promise<WebAssembly.Memory | void> {
-	let cache: WebAssembly.Memory | null = null
+async function main_new_state(config: Config): Promise<MainState> {
+	const cache = new WebAssembly.Memory({
+		initial: dataset_wasm_pages, maximum: dataset_wasm_pages, shared: true
+	})
 	
-	bc.onmessage = (x) => {
-		let data: FromWorker = x.data
-
-		if (data.type === 'pong') {
-			let killed = false
-			
-			if (st && data.cache && st.cache_memory !== data.cache) {
-				// kill this worker, it's differing to our current memory
-				bc.postMessage({ type: 'die', miner_id: data.miner_id } satisfies ToWorker)
-				killed = true
-			}
-
-			if (!st && data.cache) {
-				cache = data.cache
-			}
-
-			if (!killed) {
-				workers.set(data.miner_id, data)
-			}
-		}
-
-		if (!st) {
-			return
-		}
-
-		// do more stuff, maybe check hashrate/stats
-	}
-
-	if (!st) {
-		// sleep, get workers (they send every 500ms or so)
-		await sleep(1000)
-		bc.onmessage = null
-
-		// we didn't find one..
-		if (!cache) {
-			cache = new WebAssembly.Memory({
-				initial: dataset_wasm_pages, maximum: dataset_wasm_pages, shared: true
-			})
-		}
-
-		return cache
-	}
-}
-
-async function main_create_worker(): Promise<void> {
-
-}
-
-async function main_watch_create_workers(st: MainState, config: Config): Promise<void> {
 	if (!config.target_threads) {
 		// TODO or some other method?
 		config.target_threads = navigator.hardwareConcurrency ?? 4
 	}
 
-	const sleep200 = () => sleep(200)
+	const workers = new Map<string, WorkerPong | null>()
+	const vm = internal_get_cached_vm_handle()
+	
+	for (let i = 0; i < config.target_threads; i++) {
+		const worker = new Worker(worker_url)
+		const miner_id = nanoid()
 
-	// slowly ramp up the amount of threads at a time, you don't want to
-	// create more than the target
+		worker.postMessage({
+			type: 'init',
 
-	while (1) {
-		// TODO lower the threads by just removing from the worker list
-		if (st.workers.size >= config.target_threads) {
-			await sleep200()
-			continue
-		}
-
-		// TODO this is pretty naive and shitty, but i don't know
-
-		let diff = config.target_threads - st.workers.size
-		console.log(`main_watch_create_workers: ${diff} new workers`)
+			miner_id,
+			jit_feature,
+			cache,
+			vm,
+		} satisfies WorkerMessageInit)
 		
-		for (let i = 0; i < diff; i++) {
-			void main_create_worker()
-		}
-
-		while (st.workers.size < config.target_threads) {
-			await sleep200()
-		}
-		
-		console.log(`main_watch_create_workers: ${diff} new workers created`)
+		workers.set(miner_id, null)
 	}
-}
-
-async function main_new_state(cache: WebAssembly.Memory, workers: Map<string, WorkerPong>): Promise<MainState> {
+	
 	return {
 		cache_memory: cache,
 		cache_exports: internal_create_module(cache),
-
-		workers: workers,
+		workers,
 	}
 }
-
-/*
-
-	cache : 256 MiBs of data, initalised based on the blockchain (blockheight % 2048)
-	let (cache, superscalarhash_program) = randomx_create_cache()
-
-  MAIN (listen for new jobs, and manage the "cache")
-		- worker 1
-		- worker 2
-		- worker 3
-		- worker 4
-		- worker 5
-
-
-	1. my stupid way
-
-	2. when main dies, tear down the workers, initialise a new cache
-*/
 
 function on_job(st: MainState, job: Job) {
 	if (st.current_job?.job.seed_hash !== job.seed_hash) {
@@ -172,7 +98,7 @@ function on_job(st: MainState, job: Job) {
 	const work_allocation: Record<string, NonceSpace> = {}
 
 	// avoid a race condition, make a copy
-	const miners = st.workers.keys().toArray()
+	const miners = Array.from(st.workers.keys())
 
 	// distribute jobs to workers
 	const nonce_space = Math.ceil(0xffffffff / miners.length)
@@ -203,20 +129,56 @@ function on_job(st: MainState, job: Job) {
 	bc.postMessage(message_mine satisfies ToWorker)
 }
 
-// attempt to become main
-navigator.locks.request('the CLAW!!', async (lock) => {
-	// when you become main, wait until you're aware of all running workers.
-	// there also might exist a SharedArrayBuffer already and you want to reuse that
+let last_stats_time = Date.now()
+const stats = new Map<string, WorkerPong>()
 
+bc.onmessage = ({ data }: MessageEvent<FromWorker>) => {
+	if (data.type === 'pong') {
+		stats.set(data.miner_id, data)
+		const now = Date.now()
+		if (now - last_stats_time >= 1000) {
+			last_stats_time = now
+
+			const table: Record<string, any>[] = []
+			for (const [k, v] of stats) {
+				table.push({
+					'miner id': k,
+					'hashes per second': `${v.stats.hashes_per_second.toLocaleString()} H/s`,
+					'total hashes': v.stats.hashes_total.toLocaleString(),
+				})
+			}
+			table.push({
+				'miner id': undefined,
+				'hashes per second': `${Array.from(stats.values()).reduce((a, b) => a + b.stats.hashes_per_second, 0).toLocaleString()} H/s`,
+				'total hashes': Array.from(stats.values()).reduce((a, b) => a + b.stats.hashes_total, 0).toLocaleString(),
+			})
+
+			console.table(table)
+		}
+	}
+}
+
+export async function randomx_benchmark_become_miner() {
 	// hardcoded at the moment
 	const config: Config = {}
+	const st = await main_new_state(config)
 
-	const workers = new Map<string, WorkerPong>()
-	const st = await main_new_state(await main_watch_workers(workers), workers)
+	const job: Job = {
+		"blob": "1010f7f2e4b70618f1fe647153b5a337098080ed8f90eee987ad4dd78bc0f3aa59bf3a53c991660000000081b6ec64f730565a0ac1dd619427aa884bf4cf8aeef7f901b00074d8390c075847",
+		"job_id": "785297",
+		"target": "ffff0000",
+		"height": 3248070,
+		"seed_hash": "3b0d5af1cdc3827e2f42f03e93661a252086f8d4e35dc65a9d3ea48e240cc795"
+	}
 
-	// run in the background now, with our new state
-	void main_watch_workers(workers, st)
-	void main_watch_create_workers(st, config)
+	on_job(st, job)
+}
+
+// attempt to become main
+/* navigator.locks.request('the CLAW!!', async (lock) => {
+	// hardcoded at the moment
+	const config: Config = {}
+	const st = await main_new_state(config)
 
 	const job: Job = {
 		"blob": "1010f7f2e4b70618f1fe647153b5a337098080ed8f90eee987ad4dd78bc0f3aa59bf3a53c991660000000081b6ec64f730565a0ac1dd619427aa884bf4cf8aeef7f901b00074d8390c075847",
@@ -229,4 +191,4 @@ navigator.locks.request('the CLAW!!', async (lock) => {
 	on_job(st, job)
 }).finally(() => {
 	bc.close()
-})
+}) */

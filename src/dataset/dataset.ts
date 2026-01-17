@@ -119,6 +119,14 @@ export function internal_create_module(memory: WebAssembly.Memory): DatasetModul
 	return exports
 }
 
+export function internal_get_cached_vm_handle(): WebAssembly.Module {
+	if (!_vm_handle) {
+		_vm_handle = new WebAssembly.Module(vm_wasm as any)
+	}
+
+	return _vm_handle
+}
+
 export function internal_initialise(K: Uint8Array, memory: WebAssembly.Memory, exports: DatasetModule): RxCache {
 	const jit_begin = exports.c(wasm_pages, dataset_is_shared)
 	const key_buffer = new Uint8Array(memory.buffer, jit_begin, 60)
@@ -127,11 +135,8 @@ export function internal_initialise(K: Uint8Array, memory: WebAssembly.Memory, e
 	const jit_size = exports.K(K.length) // long blocking
 	const jit_buffer = new Uint8Array(memory.buffer, jit_begin, jit_size)
 
-	if (!_vm_handle) {
-		_vm_handle = new WebAssembly.Module(vm_wasm as any)
-	}
-
-	return new RxCache(memory, new WebAssembly.Module(jit_buffer), _vm_handle, exports)
+	const vm = internal_get_cached_vm_handle()
+	return new RxCache(memory, new WebAssembly.Module(jit_buffer), vm, exports)
 }
 
 type RxCacheOptions = {

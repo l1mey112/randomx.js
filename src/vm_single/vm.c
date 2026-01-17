@@ -15,16 +15,35 @@ static uint8_t jit_buffer[128 * 1024];
 static uint8_t jit_buffer[16 * 1024];
 #endif
 
+// used by the miner
+static struct miner_state {
+	uint8_t blob[256];
+	uint32_t blob_length;
+
+	uint32_t nonce;
+	uint32_t nonce_end;
+	uint64_t target;
+
+	uint32_t hashes;
+} st;
+
+enum {
+	NONCE_SPACE_EXHAUSTED = 0,
+	NONCE_FOUND = 1,
+};
+
 static blake2b_state *SS; // seed state
 static uint8_t program_count;
 static bool is_hex;
 
+// (single+miner) called on startup
 WASM_EXPORT("i")
 void *init(uint8_t f) {
 	jit_feature = f;
 	return jit_buffer;
 }
 
+// (single) start installing bytes
 WASM_EXPORT("I")
 void init_new_hash(bool h) {
 	is_hex = h;
@@ -32,6 +51,7 @@ void init_new_hash(bool h) {
 	blake2b_init_key(SS, 64, NULL, 0);
 }
 
+// (single) start install bytes
 WASM_EXPORT("H")
 void update_hash(uint32_t data_length) {
 	blake2b_update(SS, jit_buffer, data_length);
@@ -43,14 +63,14 @@ alignas(16) rx_program_t P; // program buffer
 alignas(16) rx_vm_t VM;
 uint8_t scratchpad[RANDOMX_SCRATCHPAD_L3];
 
-static void final_vm_iteration();
+static void final_vm_single_iteration();
+static uint32_t final_vm_miner_iteration();
 
 // repeat VM calls require the JITted code to be executed.
 // this means we have to return back to caller for the JS to compile and invoke it
 
 // handle all steps with a single function, to minimise the number of inter-language calls
-WASM_EXPORT("R")
-uint32_t iterate_vm() {
+uint32_t iterate_vm_hash() {
 	// first iteration
 	if (program_count == RANDOMX_PROGRAM_COUNT) {
 		blake2b_finalise(SS, S);
@@ -67,9 +87,6 @@ uint32_t iterate_vm() {
 		TIMEIT_END("vm iteration");
 
 		// "The last iteration skips steps 9 and 10."
-		TIMEIT("scratchpad hash");
-		final_vm_iteration();
-		TIMEIT_END("scratchpad hash");
 		return 0;
 	} else {
 		TIMEIT_END("vm iteration");
@@ -93,7 +110,7 @@ uint32_t iterate_vm() {
 	return code_size;
 }
 
-static void final_vm_iteration() {
+static void final_vm_single_iteration() {
 	// A = AesHash1R(Scratchpad), overwrite the 64 bytes of RegisterFile
 	hashAes1Rx4(scratchpad, RANDOMX_SCRATCHPAD_L3, (void *)&VM.a);
 
@@ -102,6 +119,106 @@ static void final_vm_iteration() {
 	} else {
 		blake2b(jit_buffer, 32, &VM, 256); // R = Hash256(RegisterFile)
 	}
+}
+
+// (single) iterate the VM
+WASM_EXPORT("Rs")
+uint32_t iterate_vm_single() {
+	uint32_t ret = iterate_vm_hash();
+
+	if (ret == 0) {
+		// "The last iteration skips steps 9 and 10."
+		TIMEIT("scratchpad hash");
+		final_vm_single_iteration();
+		TIMEIT_END("scratchpad hash");
+	}
+
+	return ret;
+}
+
+static void pack_nonce() {
+	/* memcpy(st.blob, jit_buffer, 39); // copy in blob parameter
+	// nonce is 4 bytes, write it out
+	memcpy(st.blob + 39, &st.nonce, 4);
+	// copy rest of the blob
+	memcpy(st.blob + 43, jit_buffer + 39, st.blob_length - 39); */
+
+	memcpy(st.blob + 39, &st.nonce, 4);
+}
+
+// (miner) iterate the VM
+WASM_EXPORT("Rm")
+uint32_t iterate_vm_miner() {
+	if (program_count == 0xff) {
+		pack_nonce();
+		blake2b(S, 64, st.blob, st.blob_length); // S = Hash512(template)
+
+		program_count = RANDOMX_PROGRAM_COUNT;
+	}
+
+	uint32_t ret = iterate_vm_hash();
+
+	if (ret == 0) {
+		// tail next
+		return final_vm_miner_iteration();
+	} else {
+		return ret;
+	}
+}
+
+static uint32_t final_vm_miner_iteration() {
+	// A = AesHash1R(Scratchpad), overwrite the 64 bytes of RegisterFile
+	hashAes1Rx4(scratchpad, RANDOMX_SCRATCHPAD_L3, (void *)&VM.a);
+	blake2b(jit_buffer, 32, &VM, 256); // R = Hash256(RegisterFile)
+	st.hashes++;
+
+	// check if the hash is below the target
+	if (*(uint64_t*)(jit_buffer + 24) < st.target) {
+		// copy nonce to the output buffer + 32
+		memcpy(jit_buffer + 32, &st.nonce, 4);
+		return NONCE_FOUND;
+	}
+
+	st.nonce++;
+	if (st.nonce >= st.nonce_end) {
+		return NONCE_SPACE_EXHAUSTED;
+	}
+
+	program_count = 0xff;
+	return iterate_vm_miner(); // continue with the next nonce
+}
+
+// (miner) initialise the miner blob
+WASM_EXPORT("B")
+void init_new_blob(uint32_t bl, uint64_t t, uint32_t n, uint32_t ne) {
+	st.blob_length = bl;
+	memcpy(st.blob, jit_buffer, st.blob_length); // copy in blob parameter
+
+	st.nonce = n;
+	st.nonce_end = ne;
+	st.target = t;
+	st.hashes = 0;
+	program_count = 0xff; // new nonce state
+
+	uint8_t major_version = st.blob[0];
+	uint8_t cnv = 0;
+	if (major_version >= 7) {
+		cnv = major_version - 6;
+	}
+
+	assert(cnv > 5); // RandomX
+}
+
+// (miner) get the current nonce
+WASM_EXPORT("n")
+uint64_t get_nonce() {
+	return st.nonce;
+}
+
+// (miner) get the current nonce
+WASM_EXPORT("h")
+uint32_t get_hashes() {
+	return st.hashes;
 }
 
 #if INSTRUMENT == 1
