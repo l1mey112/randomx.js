@@ -89,11 +89,17 @@ Below is a high level overview of how RandomX works, annotated with the specific
 
 # Build
 
-Will need `make`, `wabt`, `binaryen`, a decent version of `clang` (support for WASM toolchain), `bun` for running all the build scripts, and `node` for running the examples. Good luck.
+On a system with `bun` and `node` **installed** and on the PATH, you'll need clang and WebAssembly tools as well:
+
+```sh
+apt install build-essential clang lld binaryen wabt
+```
 
 ```sh
 bun i
-#make -j$(nproc)
 scripts/build.ts # calls into make and does everything else
 node examples/randomx.js
+
+bun run test-bun  # test using the bun runtime
+bun run test-node # test using the node runtime
 ```
